@@ -1,0 +1,576 @@
+// School Management System - Prisma Schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Standard {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  name          String         @unique
+  order         Int            @default(0)
+  students      Student[]
+  feeStructures FeeStructure[]
+  createdAt     DateTime       @default(now())
+}
+
+/// Address master data for the admission form's District/Taluka/Village dropdowns.
+model District {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  talukas   Taluka[]
+  createdAt DateTime @default(now())
+}
+
+model Taluka {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  districtId String   @db.ObjectId
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  villages   Village[]
+  createdAt  DateTime @default(now())
+
+  @@unique([districtId, name])
+}
+
+model Village {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  talukaId  String    @db.ObjectId
+  taluka    Taluka    @relation(fields: [talukaId], references: [id], onDelete: Cascade)
+  /// Bus fee charged to students from this village who take the school bus.
+  busFee    Float     @default(0)
+  students  Student[]
+  createdAt DateTime  @default(now())
+
+  @@unique([talukaId, name])
+}
+
+model Student {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  admissionNo   String       @unique
+  name          String
+  fatherName    String?
+  motherName    String?
+  gender        String?
+  dob           DateTime?
+  birthPlace    String?
+  aadharNumber  String?
+  penId         String?
+  apaarId       String?
+  phone         String?
+  address       String?
+  village       String?
+  villageId     String?      @db.ObjectId
+  villageRef    Village?     @relation(fields: [villageId], references: [id])
+  taluka        String?
+  district      String?
+  motherTongue  String?
+  religion      String?
+  caste         String?
+  subCaste      String?
+  medium        String?
+  board         String?
+  schoolBus     Boolean      @default(false)
+  standardId    String       @db.ObjectId
+  standard      Standard     @relation(fields: [standardId], references: [id])
+  academicYear  String
+  admissionDate DateTime     @default(now())
+  status        String       @default("ACTIVE")
+  customFee     Float?
+  discount      Float        @default(0)
+  photoUrl      String?
+  payments      FeePayment[]
+  leavingCertificates LeavingCertificate[]
+  bonafideCertificates BonafideCertificate[]
+  stationarySales StationarySale[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model FeeStructure {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  standardId   String         @db.ObjectId
+  standard     Standard       @relation(fields: [standardId], references: [id])
+  academicYear String
+  totalAmount  Float
+  components   FeeComponent[]
+  createdAt    DateTime       @default(now())
+
+  @@unique([standardId, academicYear])
+}
+
+model FeeComponent {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  feeStructureId String       @db.ObjectId
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+  name           String
+  amount         Float
+}
+
+model FeePayment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  receiptNo    String   @unique
+  studentId    String   @db.ObjectId
+  student      Student  @relation(fields: [studentId], references: [id])
+  amount       Float
+  paymentDate  DateTime @default(now())
+  mode         String   @default("CASH")
+  remarks      String?
+  academicYear String
+  createdAt    DateTime @default(now())
+}
+
+model Teacher {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  employeeNo    String           @unique
+  name          String
+  designation   String?
+  phone         String?
+  email         String?
+  address       String?
+  joiningDate   DateTime         @default(now())
+  monthlySalary Float
+  status        String           @default("ACTIVE")
+  photoUrl      String?
+  advances      TeacherAdvance[]
+  slips         SalarySlip[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Payroll module (new architecture — see models below)
+  salaryStructures    SalaryStructure[]
+  salaryRevisions     SalaryRevision[]
+  advancePayments     AdvancePayment[]
+  attendanceSummaries AttendanceSummary[]
+  payrolls            Payroll[]
+  salaryPayments      SalaryPayment[]
+  salaryLedgers       SalaryLedger[]
+}
+
+model TeacherAdvance {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId String   @db.ObjectId
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  amount    Float
+  date      DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model SalarySlip {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceNo        String   @unique
+  teacherId        String   @db.ObjectId
+  teacher          Teacher  @relation(fields: [teacherId], references: [id])
+  month            Int
+  year             Int
+  slipDate         DateTime @default(now())
+  workingHours     String?
+  monthlySalary    Float
+  totalDays        Float
+  absentDays       Float    @default(0)
+  halfDays         Float    @default(0)
+  latePunch        Float    @default(0)
+  earlyLogout      Float    @default(0)
+  leaveDays        Float    @default(0)
+  otherDeduction   Float    @default(0)
+  netPayment       Float
+  advanceGiven     Float    @default(0)
+  lastMonthPending Float    @default(0)
+  subTotal         Float
+  advanceDeduction Float    @default(0)
+  total            Float
+  paidAmount       Float    @default(0)
+  balance          Float
+  remarks          String?
+  createdAt        DateTime @default(now())
+}
+
+model Bus {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  vehicleNumber String       @unique
+  driverName    String?
+  phone         String?
+  capacity      Int?
+  status        String       @default("ACTIVE")
+  expenses      BusExpense[]
+  createdAt     DateTime     @default(now())
+}
+
+model BusExpense {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  busId     String   @db.ObjectId
+  bus       Bus      @relation(fields: [busId], references: [id])
+  date      DateTime @default(now())
+  amount    Float
+  liters    Float?
+  remarks   String?
+  createdAt DateTime @default(now())
+}
+
+model LeavingCertificate {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  certificateNo      String   @unique
+  studentId          String   @db.ObjectId
+  student            Student  @relation(fields: [studentId], references: [id])
+  registerNumber     String
+  aadharNumber       String?
+  apaarId            String?
+  penId              String?
+  studentName        String
+  motherName         String?
+  nationality        String?
+  motherTongue       String?
+  religion           String?
+  caste              String?
+  subCaste           String?
+  dob                DateTime?
+  dobWords           String?
+  birthPlace         String?
+  lastSchoolAttended String?
+  admissionDate      DateTime?
+  admissionStandard  String?
+  progress           String?
+  conduct            String?
+  dateOfLeaving      DateTime @default(now())
+  studyingStandard   String?
+  studyingSince      String?
+  reasonForLeaving   String?
+  remarks            String?
+  issueDate          DateTime @default(now())
+  createdAt          DateTime @default(now())
+}
+
+model BonafideCertificate {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  certificateNo  String    @unique
+  studentId      String    @db.ObjectId
+  student        Student   @relation(fields: [studentId], references: [id])
+  registerNumber String
+  studentName    String
+  gender         String?
+  standard       String?
+  division       String?
+  academicYear   String?
+  motherName     String?
+  caste          String?
+  dob            DateTime?
+  dobWords       String?
+  birthPlace     String?
+  taluka         String?
+  district       String?
+  issueDate      DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+}
+
+model StationaryItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  price     Float
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+}
+
+model StationarySale {
+  id          String                  @id @default(auto()) @map("_id") @db.ObjectId
+  saleNo      String                  @unique
+  studentId   String                  @db.ObjectId
+  student     Student                 @relation(fields: [studentId], references: [id])
+  items       StationarySaleItem[]
+  payments    StationarySalePayment[]
+  totalAmount Float
+  paymentMode String                  @default("CASH")
+  saleDate    DateTime                @default(now())
+  createdAt   DateTime                @default(now())
+}
+
+/// Ledger of amounts received against a stationary sale — supports partial/pending payments. Isolated from the fee-payment module by design.
+model StationarySalePayment {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  receiptNo   String         @unique
+  saleId      String         @db.ObjectId
+  sale        StationarySale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  amount      Float
+  paymentDate DateTime       @default(now())
+  mode        String         @default("CASH")
+  remarks     String?
+  createdAt   DateTime       @default(now())
+}
+
+model StationarySaleItem {
+  id       String         @id @default(auto()) @map("_id") @db.ObjectId
+  saleId   String         @db.ObjectId
+  sale     StationarySale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  itemId   String?        @db.ObjectId
+  itemName String
+  price    Float
+  quantity Float          @default(1)
+  amount   Float
+}
+
+model StaffAccess {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  teacherName  String
+  username     String   @unique
+  passwordHash String
+  permissions  String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model SchoolSettings {
+  id            String  @id @default("main") @map("_id")
+  name          String  @default("My School")
+  address       String?
+  udise         String?
+  phone         String?
+  email         String?
+  principalName String?
+  academicYear  String  @default("2026-27")
+}
+
+// =====================================================================
+// Payroll module — ledger-based teacher salary architecture.
+// Supersedes TeacherAdvance / SalarySlip above (kept only as migration
+// source / rollback reference; the app no longer reads or writes them).
+// =====================================================================
+
+/// Current (and historical, via `status`) monthly salary assigned to a teacher.
+model SalaryStructure {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId       String    @db.ObjectId
+  teacher         Teacher   @relation(fields: [teacherId], references: [id])
+  monthlySalary   Float
+  effectiveFrom   DateTime
+  calculationType String    @default("MONTHLY") // MONTHLY | PER_DAY | CUSTOM
+  status          String    @default("ACTIVE") // ACTIVE | SUPERSEDED
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  deletedAt       DateTime?
+
+  @@map("salary_structures")
+}
+
+/// Append-only history of salary changes. Past payrolls are unaffected by later revisions.
+model SalaryRevision {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId     String    @db.ObjectId
+  teacher       Teacher   @relation(fields: [teacherId], references: [id])
+  oldSalary     Float
+  newSalary     Float
+  effectiveFrom DateTime
+  reason        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  deletedAt     DateTime?
+
+  @@map("salary_revisions")
+}
+
+/// Money given to a teacher ahead of salary. Never counted as salary paid — applied
+/// against a future Payroll's `advanceApplied` explicitly.
+model AdvancePayment {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId      String    @db.ObjectId
+  teacher        Teacher   @relation(fields: [teacherId], references: [id])
+  amount         Float
+  date           DateTime  @default(now())
+  note           String?
+  status         String    @default("UNADJUSTED") // UNADJUSTED | PARTIALLY_ADJUSTED | ADJUSTED
+  adjustedAmount Float     @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedAt      DateTime?
+
+  @@map("advance_payments")
+}
+
+/// One row per teacher per month — manually entered totals until a daily attendance
+/// module exists. Payroll generation reads this automatically; never hand-entered in payroll.
+model AttendanceSummary {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId       String    @db.ObjectId
+  teacher         Teacher   @relation(fields: [teacherId], references: [id])
+  month           Int
+  year            Int
+  workingDays     Float
+  presentDays     Float     @default(0)
+  absentDays      Float     @default(0)
+  halfDays        Float     @default(0)
+  paidLeaveDays   Float     @default(0)
+  unpaidLeaveDays Float     @default(0)
+  lateCount       Float     @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  deletedAt       DateTime?
+
+  @@unique([teacherId, month, year])
+  @@map("attendance_summary")
+}
+
+/// The generated salary record for one teacher for one month. Unique per
+/// [teacherId, month, year] — enforced transactionally to guarantee no duplicate salary.
+model Payroll {
+  id                   String            @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId            String            @db.ObjectId
+  teacher              Teacher           @relation(fields: [teacherId], references: [id])
+  month                Int
+  year                 Int
+  invoiceNo            String            @unique
+  salaryStructureId    String?           @db.ObjectId
+  workingDays          Float
+  presentDays          Float             @default(0)
+  absentDays           Float             @default(0)
+  halfDays             Float             @default(0)
+  paidLeaveDays        Float             @default(0)
+  unpaidLeaveDays      Float             @default(0)
+  lateCount            Float             @default(0)
+  grossSalary          Float
+  leaveDeduction       Float             @default(0)
+  halfDayDeduction     Float             @default(0)
+  lateDeduction        Float             @default(0)
+  statutoryDeductionsTotal Float         @default(0) // PF + ESIC + professional tax, frozen at generation time
+  otherDeductionsTotal Float             @default(0) // statutoryDeductionsTotal + sum(deductions) — recomputed whenever a deduction line item changes
+  bonusTotal           Float             @default(0) // sum(bonuses) — recomputed whenever a bonus line item changes
+  advanceApplied       Float             @default(0)
+  previousPending      Float             @default(0)
+  netPayable           Float
+  paidAmount           Float             @default(0)
+  pendingAmount        Float
+  status               String            @default("GENERATED") // DRAFT | GENERATED | PARTIALLY_PAID | PAID
+  locked               Boolean           @default(false)
+  lockedAt             DateTime?
+  lockedBy             String?
+  remarks              String?
+  bonuses              Bonus[]
+  deductions           SalaryDeduction[]
+  payments             SalaryPayment[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  createdBy            String?
+  updatedBy            String?
+  deletedAt            DateTime?
+
+  @@unique([teacherId, month, year])
+  @@map("payrolls")
+}
+
+model Bonus {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  payrollId String    @db.ObjectId
+  payroll   Payroll   @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  type      String // FESTIVAL | PERFORMANCE | YEARLY | MANUAL
+  amount    Float
+  note      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedAt DateTime?
+
+  @@map("bonuses")
+}
+
+model SalaryDeduction {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  payrollId String    @db.ObjectId
+  payroll   Payroll   @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  type      String // PENALTY | LOAN | FINE | ADVANCE_RECOVERY | OTHER
+  amount    Float
+  note      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedAt DateTime?
+
+  @@map("salary_deductions")
+}
+
+/// One row per settlement transaction against a Payroll — enables clean partial payments.
+model SalaryPayment {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  payrollId   String    @db.ObjectId
+  payroll     Payroll   @relation(fields: [payrollId], references: [id])
+  teacherId   String    @db.ObjectId
+  teacher     Teacher   @relation(fields: [teacherId], references: [id])
+  amount      Float
+  paymentDate DateTime  @default(now())
+  paymentMode String    @default("CASH")
+  referenceNo String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+
+  @@map("salary_payments")
+}
+
+/// Append-only timeline — one row per payroll-affecting event. The "Teacher Ledger".
+model SalaryLedger {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId   String   @db.ObjectId
+  teacher     Teacher  @relation(fields: [teacherId], references: [id])
+  type        String // SALARY_GENERATED | ADVANCE_GIVEN | ADVANCE_EDITED | ADVANCE_DELETED | BONUS_ADDED | DEDUCTION_ADDED | SALARY_PAID | SALARY_REVISED | PAYROLL_LOCKED | PAYROLL_UNLOCKED
+  amount      Float    @default(0)
+  description String
+  refId       String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  createdBy   String?
+
+  @@map("salary_ledgers")
+}
+
+/// Single global document (id: "main"), same pattern as SchoolSettings.
+model SalarySettings {
+  id                         String   @id @default("main") @map("_id")
+  workingDaysPerMonth        Float    @default(26)
+  calculationMethod          String   @default("MONTHLY") // MONTHLY | PER_DAY | CUSTOM
+  halfDayDeductionRule       Float    @default(0.5) // fraction of a day's pay deducted per half day
+  absentDeductionRule        Float    @default(1) // fraction of a day's pay deducted per absent/unpaid-leave day
+  lateRuleThreshold          Float    @default(3) // late occurrences allowed before deduction kicks in
+  lateDeductionPerOccurrence Float    @default(0)
+  roundOff                   Boolean  @default(true)
+  pfEnabled                  Boolean  @default(false)
+  pfRate                     Float    @default(0)
+  esicEnabled                Boolean  @default(false)
+  esicRate                   Float    @default(0)
+  professionalTaxEnabled     Boolean  @default(false)
+  professionalTaxAmount      Float    @default(0)
+  defaultLeavePolicy         String?
+  updatedAt                  DateTime @updatedAt
+  updatedBy                  String?
+
+  @@map("salary_settings")
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String // SALARY_GENERATED | SALARY_PAID | UPCOMING_SALARY | PENDING_REMINDER
+  audience  String // ADMIN | TEACHER
+  teacherId String?  @db.ObjectId
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  @@map("notifications")
+}

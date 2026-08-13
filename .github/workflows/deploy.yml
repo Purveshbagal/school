@@ -1,0 +1,35 @@
+name: Deploy School to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            cd /var/www/school
+            cat > .env << 'EOF'
+            DATABASE_URL="mongodb://31.97.236.41:27017/school-app?directConnection=true"
+            NODE_ENV=production
+            PORT=9696
+            EOF
+            git pull origin main
+            npm ci
+            npm run build
+            pm2 restart school || PORT=9696 pm2 start npm --name "school" -- start
+            pm2 save
+            echo "✅ School Deploy successful!"

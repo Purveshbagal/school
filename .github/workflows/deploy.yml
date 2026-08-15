@@ -22,7 +22,9 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /var/www/school
-            git pull origin main
+            git remote set-url origin https://rushiravtale:${{ secrets.GIT_TOKEN }}@github.com/Purveshbagal/school.git
+            git fetch origin
+            git reset --hard origin/main
             cat > .env << 'EOF'
             DATABASE_URL="mongodb://127.0.0.1:27017/school-app?directConnection=true"
             NODE_ENV=production

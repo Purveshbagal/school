@@ -22,15 +22,16 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /var/www/school
+            git pull origin main
             cat > .env << 'EOF'
-            DATABASE_URL="mongodb://31.97.236.41:27017/school-app?directConnection=true"
+            DATABASE_URL="mongodb://127.0.0.1:27017/school-app?directConnection=true"
             NODE_ENV=production
             PORT=9696
             COOKIE_SECURE=false
             EOF
-            git pull origin main
             npm ci
+            rm -rf .next/
             npm run build
-            pm2 restart school || PORT=9696 pm2 start npm --name "school" -- start
+            pm2 restart school --update-env
             pm2 save
             echo "✅ School Deploy successful!"

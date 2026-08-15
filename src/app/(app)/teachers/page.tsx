@@ -15,7 +15,14 @@ import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
 import { formatCurrency } from "@/lib/utils";
 import { deleteTeacherAction } from "@/app/actions/teachers";
-import { UserPlus, Trash2 } from "lucide-react";
+import { UserPlus } from "lucide-react";
+
+function deleteConfirmMessage(name: string, hasPayrollHistory: boolean) {
+  if (hasPayrollHistory) {
+    return `Delete ${name}? This teacher has payroll runs, salary payments, attendance, and/or advances on file — deleting permanently erases ALL of that history too, with no way to recover it. If you only want to stop showing them as staff, set their status to Inactive instead. This cannot be undone.`;
+  }
+  return `Delete ${name}? This will also delete all their advances and salary slips. This cannot be undone.`;
+}
 
 export default async function TeachersPage() {
   const teachers = await prisma.teacher.findMany({
@@ -106,23 +113,11 @@ export default async function TeachersPage() {
                         )}
                         <div className="flex gap-1.5">
                           <Button variant="outline" size="sm" render={<Link href={`/teachers/${t.id}`}>View</Link>} />
-                          {sum.hasPayrollHistory ? (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled
-                              title="Cannot delete: has payroll history. Set status to Inactive instead."
-                              className="text-muted-foreground/40"
-                            >
-                              <Trash2 />
-                            </Button>
-                          ) : (
-                            <DeleteButton
-                              action={deleteTeacherAction}
-                              hiddenFields={{ id: t.id }}
-                              confirmMessage={`Delete ${t.name}? This will also delete all their advances and salary slips. This cannot be undone.`}
-                            />
-                          )}
+                          <DeleteButton
+                            action={deleteTeacherAction}
+                            hiddenFields={{ id: t.id }}
+                            confirmMessage={deleteConfirmMessage(t.name, sum.hasPayrollHistory)}
+                          />
                         </div>
                       </div>
                     </div>
@@ -171,23 +166,11 @@ export default async function TeachersPage() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1.5">
                             <Button variant="outline" size="sm" render={<Link href={`/teachers/${t.id}`}>View</Link>} />
-                            {sum.hasPayrollHistory ? (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled
-                                title="Cannot delete: has payroll history. Set status to Inactive instead."
-                                className="text-muted-foreground/40"
-                              >
-                                <Trash2 />
-                              </Button>
-                            ) : (
-                              <DeleteButton
-                                action={deleteTeacherAction}
-                                hiddenFields={{ id: t.id }}
-                                confirmMessage={`Delete ${t.name}? This will also delete all their advances and salary slips. This cannot be undone.`}
-                              />
-                            )}
+                            <DeleteButton
+                              action={deleteTeacherAction}
+                              hiddenFields={{ id: t.id }}
+                              confirmMessage={deleteConfirmMessage(t.name, sum.hasPayrollHistory)}
+                            />
                           </div>
                         </TableCell>
                       </TableRow>

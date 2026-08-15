@@ -94,28 +94,21 @@ export async function updateTeacherAction(
 export async function deleteTeacherAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
 
-  // Every teacher gets an auto-assigned SalaryStructure + a "SALARY_STRUCTURE_ASSIGNED"
-  // ledger entry at creation time (see createTeacherAction) — those don't represent real
-  // payroll activity, so they're excluded here and cleaned up below instead of blocking
-  // deletion. Only actual activity (attendance, generated payroll, payments, advances,
-  // salary revisions) blocks deletion; admins should set status to Inactive instead.
-  const [salaryRevisions, advances, attendance, payrolls, salaryPayments, salaryLedgers] = await Promise.all([
-    prisma.salaryRevision.count({ where: { teacherId: id } }),
-    prisma.advancePayment.count({ where: { teacherId: id } }),
-    prisma.attendanceSummary.count({ where: { teacherId: id } }),
-    prisma.payroll.count({ where: { teacherId: id } }),
-    prisma.salaryPayment.count({ where: { teacherId: id } }),
-    prisma.salaryLedger.count({ where: { teacherId: id, type: { not: "SALARY_STRUCTURE_ASSIGNED" } } }),
-  ]);
-  const hasPayrollHistory =
-    salaryRevisions + advances + attendance + payrolls + salaryPayments + salaryLedgers > 0;
-  if (hasPayrollHistory) return;
-
+  // Deleting a teacher permanently erases their entire payroll trail — payroll runs
+  // (and each run's bonuses/deductions), salary payments, advances, attendance,
+  // salary structure/revisions, and ledger history. There is no "detach and keep
+  // history" option; this is intentionally destructive by admin choice.
   await prisma.$transaction([
     // Legacy pre-payroll-redesign data — hard deleted as before, no longer read anywhere.
     prisma.teacherAdvance.deleteMany({ where: { teacherId: id } }),
     prisma.salarySlip.deleteMany({ where: { teacherId: id } }),
-    // Auto-created at teacher creation, no real activity attached — safe to clean up.
+    // SalaryPayment references Payroll without cascade, so it must go before Payroll.
+    prisma.salaryPayment.deleteMany({ where: { teacherId: id } }),
+    // Payroll's Bonus/SalaryDeduction rows cascade automatically (onDelete: Cascade).
+    prisma.payroll.deleteMany({ where: { teacherId: id } }),
+    prisma.advancePayment.deleteMany({ where: { teacherId: id } }),
+    prisma.attendanceSummary.deleteMany({ where: { teacherId: id } }),
+    prisma.salaryRevision.deleteMany({ where: { teacherId: id } }),
     prisma.salaryStructure.deleteMany({ where: { teacherId: id } }),
     prisma.salaryLedger.deleteMany({ where: { teacherId: id } }),
     prisma.teacher.delete({ where: { id } }),

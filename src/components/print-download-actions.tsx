@@ -61,7 +61,7 @@ export function PrintDownloadActions({
   }
 
   return (
-    <div className="flex justify-end gap-2 print:hidden">
+    <div className="flex flex-wrap justify-end gap-2 print:hidden">
       <Button variant="outline" onClick={handleDownload} disabled={downloading}>
         {downloading ? <Loader2 className="animate-spin" /> : <Download />}
         {downloading ? "Preparing..." : "Download PDF"}

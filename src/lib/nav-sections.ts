@@ -21,6 +21,9 @@ import {
   BarChart3,
   SlidersHorizontal,
   MapPin,
+  BookOpen,
+  ClipboardList,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +43,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/standards", label: "Standards & Fee Structure", icon: Layers, tone: "text-blue-300" },
       { href: "/leaving-certificates", label: "Leaving Certificate", icon: ScrollText, tone: "text-blue-300" },
       { href: "/bonafide-certificates", label: "Bonafide Certificate", icon: FileCheck, tone: "text-blue-300" },
+    ],
+  },
+  {
+    label: "Examination",
+    items: [
+      { href: "/subjects", label: "Subjects", icon: BookOpen, tone: "text-pink-300" },
+      { href: "/exams/marks", label: "Students Marks", icon: ClipboardList, tone: "text-pink-300" },
+      { href: "/exams", label: "Set Exam", icon: CalendarClock, tone: "text-pink-300" },
     ],
   },
   {

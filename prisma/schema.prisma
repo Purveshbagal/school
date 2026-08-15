@@ -16,6 +16,7 @@ model Standard {
   order         Int            @default(0)
   students      Student[]
   feeStructures FeeStructure[]
+  subjects      Subject[]
   createdAt     DateTime       @default(now())
 }
 
@@ -89,6 +90,7 @@ model Student {
   leavingCertificates LeavingCertificate[]
   bonafideCertificates BonafideCertificate[]
   stationarySales StationarySale[]
+  marks         Marks[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 }
@@ -559,6 +561,53 @@ model SalarySettings {
   updatedBy                  String?
 
   @@map("salary_settings")
+}
+
+// =====================================================================
+// Examination module — subjects, exams/terms, and per-student marks.
+// =====================================================================
+
+model Subject {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  standardId String   @db.ObjectId
+  standard   Standard @relation(fields: [standardId], references: [id])
+  marks      Marks[]
+  createdAt  DateTime @default(now())
+
+  @@unique([standardId, name])
+}
+
+/// Represents one exam/term (e.g. "Unit Test 1"). Also carries the public
+/// result-lookup link: resultToken is the /result/[token] slug, and
+/// resultLinkActive lets "Stop" instantly disable it without deleting the token.
+model Exam {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  examDate         DateTime
+  resultDate       DateTime
+  resultToken      String?   @unique
+  resultLinkActive Boolean   @default(false)
+  marks            Marks[]
+  createdAt        DateTime  @default(now())
+}
+
+/// One row per student/exam/subject. totalMarks lives here (not on Subject)
+/// since a paper's total can differ per exam.
+model Marks {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId     String   @db.ObjectId
+  student       Student  @relation(fields: [studentId], references: [id])
+  examId        String   @db.ObjectId
+  exam          Exam     @relation(fields: [examId], references: [id])
+  subjectId     String   @db.ObjectId
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  marksObtained Float
+  totalMarks    Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([studentId, examId, subjectId])
 }
 
 model Notification {

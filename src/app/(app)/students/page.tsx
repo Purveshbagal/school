@@ -18,13 +18,15 @@ import { getStudentFeeSummary } from "@/lib/fees";
 import { deleteStudentAction } from "@/app/actions/students";
 import { StudentsFilters } from "./students-filters";
 import { StudentsBoardTabs } from "./students-board-tabs";
+import { StudentsImportExport } from "./students-import-export";
 import { UserPlus } from "lucide-react";
-import type { Prisma } from "@/generated/prisma/client";
-
-const CBSE = "CBSE";
-const STATE_BOARD = "Maharashtra State Board";
-const PRE_PRIMARY = "PRE_PRIMARY";
-const PRE_PRIMARY_STANDARDS = ["LKG", "UKG"];
+import {
+  buildStudentsWhere,
+  CBSE,
+  STATE_BOARD,
+  PRE_PRIMARY,
+  PRE_PRIMARY_STANDARDS,
+} from "@/lib/students-query";
 
 export default async function StudentsPage({
   searchParams,
@@ -45,26 +47,8 @@ export default async function StudentsPage({
     d.talukas.flatMap((t) => t.villages.map((v) => ({ id: v.id, name: v.name, taluka: t.name })))
   );
 
-  const baseWhere: Prisma.StudentWhereInput = {
-    ...(standard ? { standardId: standard } : {}),
-    ...(village ? { villageId: village } : {}),
-    ...(status ? { status } : {}),
-    ...(q
-      ? {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { admissionNo: { contains: q, mode: "insensitive" } },
-            { fatherName: { contains: q, mode: "insensitive" } },
-            { phone: { contains: q } },
-          ],
-        }
-      : {}),
-  };
-
-  const activeWhere: Prisma.StudentWhereInput =
-    board === PRE_PRIMARY
-      ? { ...baseWhere, standard: { name: { in: PRE_PRIMARY_STANDARDS } } }
-      : { ...baseWhere, ...(board ? { board } : {}) };
+  const baseWhere = buildStudentsWhere({ q, standard, village, status });
+  const activeWhere = buildStudentsWhere({ q, standard, village, status, board });
 
   const [students, totalCount, prePrimaryCount, cbseCount, stateBoardCount] = await Promise.all([
     prisma.student.findMany({
@@ -97,9 +81,15 @@ export default async function StudentsPage({
         title="Students"
         description={`${students.length} student${students.length === 1 ? "" : "s"} found`}
         actions={
-          <Button render={<Link href="/students/new" />}>
-            <UserPlus /> New Admission
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <StudentsImportExport
+              standards={standards}
+              exportQuery={{ q, standard, village, status, board }}
+            />
+            <Button render={<Link href="/students/new" />}>
+              <UserPlus /> New Admission
+            </Button>
+          </div>
         }
       />
 

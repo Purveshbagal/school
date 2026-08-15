@@ -91,21 +91,33 @@ export async function updateTeacherAction(
   redirect(`/teachers/${id}`);
 }
 
-export async function deleteTeacherAction(formData: FormData): Promise<never> {
+export async function deleteTeacherAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
-  const now = new Date();
+
+  // Every teacher gets an auto-assigned SalaryStructure + a "SALARY_STRUCTURE_ASSIGNED"
+  // ledger entry at creation time (see createTeacherAction) — those don't represent real
+  // payroll activity, so they're excluded here and cleaned up below instead of blocking
+  // deletion. Only actual activity (attendance, generated payroll, payments, advances,
+  // salary revisions) blocks deletion; admins should set status to Inactive instead.
+  const [salaryRevisions, advances, attendance, payrolls, salaryPayments, salaryLedgers] = await Promise.all([
+    prisma.salaryRevision.count({ where: { teacherId: id } }),
+    prisma.advancePayment.count({ where: { teacherId: id } }),
+    prisma.attendanceSummary.count({ where: { teacherId: id } }),
+    prisma.payroll.count({ where: { teacherId: id } }),
+    prisma.salaryPayment.count({ where: { teacherId: id } }),
+    prisma.salaryLedger.count({ where: { teacherId: id, type: { not: "SALARY_STRUCTURE_ASSIGNED" } } }),
+  ]);
+  const hasPayrollHistory =
+    salaryRevisions + advances + attendance + payrolls + salaryPayments + salaryLedgers > 0;
+  if (hasPayrollHistory) return;
 
   await prisma.$transaction([
     // Legacy pre-payroll-redesign data — hard deleted as before, no longer read anywhere.
     prisma.teacherAdvance.deleteMany({ where: { teacherId: id } }),
     prisma.salarySlip.deleteMany({ where: { teacherId: id } }),
-    // Payroll module data is soft-deleted, not destroyed — preserves the audit trail
-    // even after the teacher record itself is removed.
-    prisma.salaryStructure.updateMany({ where: { teacherId: id }, data: { deletedAt: now } }),
-    prisma.salaryRevision.updateMany({ where: { teacherId: id }, data: { deletedAt: now } }),
-    prisma.advancePayment.updateMany({ where: { teacherId: id }, data: { deletedAt: now } }),
-    prisma.attendanceSummary.updateMany({ where: { teacherId: id }, data: { deletedAt: now } }),
-    prisma.payroll.updateMany({ where: { teacherId: id }, data: { deletedAt: now } }),
+    // Auto-created at teacher creation, no real activity attached — safe to clean up.
+    prisma.salaryStructure.deleteMany({ where: { teacherId: id } }),
+    prisma.salaryLedger.deleteMany({ where: { teacherId: id } }),
     prisma.teacher.delete({ where: { id } }),
   ]);
 

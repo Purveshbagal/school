@@ -24,6 +24,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Public, no-login exam result lookup link (shared with parents/students).
+  if (pathname.startsWith("/result/")) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) {
     if (pathname === "/") return NextResponse.next();

@@ -5,6 +5,7 @@ import { getStudentFeeSummary } from "@/lib/fees";
 import { formatDate } from "@/lib/utils";
 import { PrintDownloadActions } from "@/components/print-download-actions";
 import { DocumentHeader } from "@/components/document-header";
+import { DocumentWatermark } from "@/components/document-watermark";
 
 export default async function AdmissionFormPage({
   params,
@@ -44,8 +45,10 @@ export default async function AdmissionFormPage({
 
       <div
         id="print-content"
-        className="mx-auto max-w-3xl bg-white p-8 shadow-lg ring-1 ring-slate-200 print:p-10 print:shadow-none print:ring-0"
+        className="relative mx-auto max-w-3xl overflow-hidden bg-white p-4 shadow-lg ring-1 ring-slate-200 sm:p-8 print:p-10 print:shadow-none print:ring-0"
       >
+        <DocumentWatermark />
+        <div className="relative z-10">
         <DocumentHeader
           docType="Student Admission Form"
           schoolName={settings?.name || "School Name"}
@@ -109,6 +112,7 @@ export default async function AdmissionFormPage({
             <div className="mb-1 h-8 w-40 border-b border-slate-400" />
             <p className="text-slate-500">Principal&apos;s Sign</p>
           </div>
+        </div>
         </div>
       </div>
     </div>

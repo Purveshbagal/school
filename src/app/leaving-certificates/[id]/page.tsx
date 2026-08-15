@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { PrintDownloadActions } from "@/components/print-download-actions";
+import { DocumentWatermark } from "@/components/document-watermark";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteLeavingCertificateAction } from "@/app/actions/leaving-certificates";
@@ -34,7 +35,7 @@ export default async function LeavingCertificatePage({
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
-      <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-2 px-4 print:hidden">
+      <div className="mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2 px-4 print:hidden">
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -54,25 +55,27 @@ export default async function LeavingCertificatePage({
 
       <div
         id="print-content"
-        className="mx-auto max-w-3xl bg-white p-8 shadow-lg ring-1 ring-slate-200 print:p-12 print:shadow-none print:ring-0"
+        className="relative mx-auto max-w-3xl overflow-hidden bg-white p-4 shadow-lg ring-1 ring-slate-200 sm:p-8 print:p-12 print:shadow-none print:ring-0"
       >
+        <DocumentWatermark />
+        <div className="relative z-10">
         <div className="flex items-start justify-between text-xs text-slate-500">
           <div>{settings?.udise && `U-DISE No: ${settings.udise}`}</div>
           <div>Certificate No: {certificate.certificateNo}</div>
         </div>
 
-        <div className="mt-1 flex items-center gap-4 border-b-2 border-blue-700 pb-4">
+        <div className="mt-1 flex items-center gap-2 border-b-2 border-blue-700 pb-4 sm:gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/image/logo.jpeg"
             alt="School Logo"
-            className="h-20 w-20 shrink-0 object-contain"
+            className="h-12 w-12 shrink-0 object-contain sm:h-20 sm:w-20"
           />
-          <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-slate-900">{settings?.name || "School Name"}</h1>
-            {settings?.address && <p className="text-sm text-slate-500">{settings.address}</p>}
+          <div className="min-w-0 flex-1 text-center">
+            <h1 className="text-lg leading-tight font-bold text-slate-900 sm:text-2xl">{settings?.name || "School Name"}</h1>
+            {settings?.address && <p className="text-xs text-slate-500 sm:text-sm">{settings.address}</p>}
           </div>
-          <div className="h-20 w-20 shrink-0" />
+          <div className="hidden h-20 w-20 shrink-0 sm:block" />
         </div>
 
         <div className="mt-3 flex items-center justify-between">
@@ -125,6 +128,7 @@ export default async function LeavingCertificatePage({
             <div className="mb-1 h-10 w-32 border-b border-slate-400" />
             <p className="text-slate-500">Principal (Sign &amp; Stamp)</p>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
 import { formatCurrency } from "@/lib/utils";
 import { deleteTeacherAction } from "@/app/actions/teachers";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Trash2 } from "lucide-react";
 
 export default async function TeachersPage() {
   const teachers = await prisma.teacher.findMany({
@@ -23,11 +23,32 @@ export default async function TeachersPage() {
     include: {
       salaryStructures: { where: { status: "ACTIVE", deletedAt: null }, orderBy: { effectiveFrom: "desc" }, take: 1 },
       advancePayments: { where: { deletedAt: null, status: { in: ["UNADJUSTED", "PARTIALLY_ADJUSTED"] } } },
+      _count: {
+        select: {
+          salaryRevisions: true,
+          advancePayments: true,
+          attendanceSummaries: true,
+          payrolls: true,
+          salaryPayments: true,
+          salaryLedgers: { where: { type: { not: "SALARY_STRUCTURE_ASSIGNED" } } },
+        },
+      },
     },
   });
   const summaries = teachers.map((t) => ({
     monthlySalary: t.salaryStructures[0]?.monthlySalary ?? t.monthlySalary,
     outstandingAdvance: t.advancePayments.reduce((sum, a) => sum + (a.amount - a.adjustedAmount), 0),
+    // The auto-assigned SalaryStructure and its "SALARY_STRUCTURE_ASSIGNED" ledger entry
+    // (created for every teacher on add) are excluded — they don't represent real payroll
+    // activity. Only genuine activity blocks deletion.
+    hasPayrollHistory:
+      t._count.salaryRevisions +
+        t._count.advancePayments +
+        t._count.attendanceSummaries +
+        t._count.payrolls +
+        t._count.salaryPayments +
+        t._count.salaryLedgers >
+      0,
   }));
 
   return (
@@ -85,11 +106,23 @@ export default async function TeachersPage() {
                         )}
                         <div className="flex gap-1.5">
                           <Button variant="outline" size="sm" render={<Link href={`/teachers/${t.id}`}>View</Link>} />
-                          <DeleteButton
-                            action={deleteTeacherAction}
-                            hiddenFields={{ id: t.id }}
-                            confirmMessage={`Delete ${t.name}? This will also delete all their advances and salary slips. This cannot be undone.`}
-                          />
+                          {sum.hasPayrollHistory ? (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled
+                              title="Cannot delete: has payroll history. Set status to Inactive instead."
+                              className="text-muted-foreground/40"
+                            >
+                              <Trash2 />
+                            </Button>
+                          ) : (
+                            <DeleteButton
+                              action={deleteTeacherAction}
+                              hiddenFields={{ id: t.id }}
+                              confirmMessage={`Delete ${t.name}? This will also delete all their advances and salary slips. This cannot be undone.`}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -138,11 +171,23 @@ export default async function TeachersPage() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1.5">
                             <Button variant="outline" size="sm" render={<Link href={`/teachers/${t.id}`}>View</Link>} />
-                            <DeleteButton
-                              action={deleteTeacherAction}
-                              hiddenFields={{ id: t.id }}
-                              confirmMessage={`Delete ${t.name}? This will also delete all their advances and salary slips. This cannot be undone.`}
-                            />
+                            {sum.hasPayrollHistory ? (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled
+                                title="Cannot delete: has payroll history. Set status to Inactive instead."
+                                className="text-muted-foreground/40"
+                              >
+                                <Trash2 />
+                              </Button>
+                            ) : (
+                              <DeleteButton
+                                action={deleteTeacherAction}
+                                hiddenFields={{ id: t.id }}
+                                confirmMessage={`Delete ${t.name}? This will also delete all their advances and salary slips. This cannot be undone.`}
+                              />
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

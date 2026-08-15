@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { PrintDownloadActions } from "@/components/print-download-actions";
+import { DocumentWatermark } from "@/components/document-watermark";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteBonafideCertificateAction } from "@/app/actions/bonafide-certificates";
@@ -34,7 +35,7 @@ export default async function BonafideCertificatePage({
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
-      <div className="mx-auto mb-4 flex w-[210mm] max-w-full items-center justify-between gap-2 px-4 print:hidden">
+      <div className="mx-auto mb-4 flex w-[210mm] max-w-full flex-wrap items-center justify-between gap-2 px-4 print:hidden">
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -59,28 +60,30 @@ export default async function BonafideCertificatePage({
 
       <div
         id="print-content"
-        className="print-a5-landscape mx-auto box-border flex min-h-[148mm] w-[210mm] max-w-full flex-col border-2 border-blue-700 bg-white p-8 shadow-lg ring-1 ring-slate-200 print:shadow-none print:ring-0"
+        className="print-a5-landscape relative mx-auto box-border flex min-h-[148mm] w-[210mm] max-w-full flex-col overflow-hidden border-2 border-blue-700 bg-white p-4 shadow-lg ring-1 ring-slate-200 sm:p-8 print:shadow-none print:ring-0"
       >
+        <DocumentWatermark widthClassName="w-2/5" />
+        <div className="relative z-10 flex flex-1 flex-col">
         <div className="flex items-start justify-between text-xs text-slate-500">
           <div>No. {certificate.certificateNo}</div>
           <div>Gen. Reg. No: {certificate.registerNumber}</div>
         </div>
 
-        <div className="mt-1 flex items-center gap-3 border-b-2 border-blue-700 pb-3">
+        <div className="mt-1 flex items-center gap-2 border-b-2 border-blue-700 pb-3 sm:gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/image/logo.jpeg"
             alt="School Logo"
-            className="h-16 w-16 shrink-0 object-contain"
+            className="h-10 w-10 shrink-0 object-contain sm:h-16 sm:w-16"
           />
-          <div className="flex-1 text-center">
-            <h1 className="text-xl font-bold text-slate-900">{settings?.name || "School Name"}</h1>
-            {settings?.address && <p className="text-xs text-slate-500">{settings.address}</p>}
+          <div className="min-w-0 flex-1 text-center">
+            <h1 className="text-sm leading-tight font-bold text-slate-900 sm:text-xl">{settings?.name || "School Name"}</h1>
+            {settings?.address && <p className="text-[10px] text-slate-500 sm:text-xs">{settings.address}</p>}
           </div>
-          <div className="h-16 w-16 shrink-0" />
+          <div className="hidden h-16 w-16 shrink-0 sm:block" />
         </div>
 
-        <h2 className="mt-3 text-center text-lg font-bold tracking-wide text-blue-700 uppercase">
+        <h2 className="mt-3 text-center text-base font-bold tracking-wide text-blue-700 uppercase sm:text-lg">
           Bonafide Certificate
         </h2>
 
@@ -124,6 +127,7 @@ export default async function BonafideCertificatePage({
             <div className="mb-1 h-10 w-36 border-b border-slate-400" />
             <p className="font-semibold text-slate-600">H.M. / Principal</p>
           </div>
+        </div>
         </div>
       </div>
     </div>

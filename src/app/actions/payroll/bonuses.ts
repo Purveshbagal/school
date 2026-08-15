@@ -56,6 +56,9 @@ export async function deleteBonusAction(formData: FormData): Promise<void> {
   const payroll = await prisma.payroll.findUnique({ where: { id: payrollId } });
   if (!payroll || payroll.locked) return;
 
+  const bonus = await prisma.bonus.findUnique({ where: { id } });
+  if (!bonus || bonus.payrollId !== payrollId) return;
+
   const session = await getSession();
 
   await prisma.$transaction(async (tx) => {

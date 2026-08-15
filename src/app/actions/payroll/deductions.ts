@@ -56,6 +56,9 @@ export async function deleteDeductionAction(formData: FormData): Promise<void> {
   const payroll = await prisma.payroll.findUnique({ where: { id: payrollId } });
   if (!payroll || payroll.locked) return;
 
+  const deduction = await prisma.salaryDeduction.findUnique({ where: { id } });
+  if (!deduction || deduction.payrollId !== payrollId) return;
+
   const session = await getSession();
 
   await prisma.$transaction(async (tx) => {

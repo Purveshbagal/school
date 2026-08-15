@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
 
@@ -11,6 +12,11 @@ export async function createAccessAction(
   _prevState: { error?: string } | undefined,
   formData: FormData
 ): Promise<{ error?: string } | never> {
+  const session = await getSession();
+  if (session?.role !== "admin") {
+    return { error: "Not authorized" };
+  }
+
   const teacherName = String(formData.get("teacherName") || "").trim();
   const username = String(formData.get("username") || "").trim();
   const password = String(formData.get("password") || "").trim();
@@ -48,6 +54,11 @@ export async function updateAccessAction(
   _prevState: { error?: string } | undefined,
   formData: FormData
 ): Promise<{ error?: string } | never> {
+  const session = await getSession();
+  if (session?.role !== "admin") {
+    return { error: "Not authorized" };
+  }
+
   const id = String(formData.get("id") || "");
   const teacherName = String(formData.get("teacherName") || "").trim();
   const password = String(formData.get("password") || "").trim();
@@ -77,6 +88,9 @@ export async function updateAccessAction(
 }
 
 export async function deleteAccessAction(formData: FormData): Promise<void> {
+  const session = await getSession();
+  if (session?.role !== "admin") return;
+
   const id = String(formData.get("id"));
   await prisma.staffAccess.delete({ where: { id } });
   revalidatePath("/settings");

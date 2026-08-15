@@ -8,8 +8,13 @@ export async function nextEmployeeNo(): Promise<string> {
 
 export async function nextReceiptNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.feePayment.count();
-  return `FEE-${year}-${String(count + 1).padStart(5, "0")}`;
+  const prefix = `FEE-${year}-`;
+  const last = await prisma.feePayment.findFirst({
+    where: { receiptNo: { startsWith: prefix } },
+    orderBy: { receiptNo: "desc" },
+  });
+  const lastSeq = last ? parseInt(last.receiptNo.slice(prefix.length), 10) || 0 : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(5, "0")}`;
 }
 
 export async function nextInvoiceNo(): Promise<string> {

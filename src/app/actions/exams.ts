@@ -15,6 +15,11 @@ export async function createExamAction(formData: FormData): Promise<void> {
       name,
       examDate: new Date(examDateRaw),
       resultDate: new Date(resultDateRaw),
+      // Always assign a token, even though the link isn't public yet (resultLinkActive
+      // stays false until "Generate Link"). MongoDB's unique index on resultToken treats
+      // multiple nulls as duplicates, so leaving it unset here would break creating a
+      // second exam before the first one's link was ever generated.
+      resultToken: randomBytes(16).toString("hex"),
     },
   });
   revalidatePath("/exams");

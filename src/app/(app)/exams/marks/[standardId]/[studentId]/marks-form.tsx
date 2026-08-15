@@ -55,8 +55,14 @@ export function MarksForm({
       <div className="space-y-3">
         {subjects.map((subject) => {
           const existing = existingMarks[subject.id];
+          // Remount (not just re-render) whenever the server-loaded saved values
+          // for this subject/exam actually change — e.g. switching the exam
+          // dropdown, or right after a save populates previously-empty marks.
+          // Otherwise Base UI's uncontrolled Input warns about defaultValue
+          // changing after the initial mount.
+          const rowKey = `${subject.id}-${selectedExamId}-${existing?.marksObtained ?? "x"}-${existing?.totalMarks ?? "x"}`;
           return (
-            <div key={subject.id} className="rounded-lg border border-border p-3">
+            <div key={rowKey} className="rounded-lg border border-border p-3">
               <input type="hidden" name="subjectId" value={subject.id} />
               <p className="mb-2 text-sm font-medium">{subject.name}</p>
               <div className="grid grid-cols-2 gap-2">

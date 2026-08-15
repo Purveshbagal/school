@@ -12,6 +12,7 @@ export type LedgerEntryType =
   | "BONUS_ADDED"
   | "DEDUCTION_ADDED"
   | "SALARY_PAID"
+  | "SALARY_PAYMENT_DELETED"
   | "PAYROLL_LOCKED"
   | "PAYROLL_UNLOCKED";
 

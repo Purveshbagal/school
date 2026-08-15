@@ -84,3 +84,46 @@ export async function paySalaryAction(
   revalidatePath("/salary-slips");
   return {};
 }
+
+export async function deleteSalaryPaymentAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") || "");
+  const payrollId = String(formData.get("payrollId") || "");
+
+  const payroll = await prisma.payroll.findUnique({ where: { id: payrollId } });
+  if (!payroll || payroll.locked) return;
+
+  const payment = await prisma.salaryPayment.findUnique({ where: { id } });
+  if (!payment || payment.deletedAt || payment.payrollId !== payrollId) return;
+
+  const session = await getSession();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.salaryPayment.update({
+      where: { id },
+      data: { deletedAt: new Date(), updatedBy: session?.username },
+    });
+
+    await tx.payroll.update({
+      where: { id: payrollId },
+      data: { paidAmount: { decrement: payment.amount } },
+    });
+
+    const updated = await recomputePayrollTotals(tx, payrollId);
+
+    await writeLedgerEntry(tx, {
+      teacherId: payroll.teacherId,
+      type: "SALARY_PAYMENT_DELETED",
+      amount: payment.amount,
+      description: `Payment of ${formatCurrency(payment.amount)} deleted — ${formatCurrency(updated.pendingAmount)} now pending`,
+      refId: payrollId,
+      createdBy: session?.username,
+    });
+  });
+
+  revalidatePath(`/payroll/${payroll.teacherId}`);
+  revalidatePath("/payroll");
+  revalidatePath(`/salary-slips/${payrollId}`);
+  revalidatePath("/salary-slips");
+  revalidatePath("/payroll-reports");
+  revalidatePath("/dashboard");
+}

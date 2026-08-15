@@ -15,6 +15,7 @@ import { LineItemForm } from "./line-item-form";
 import { LockControls } from "./lock-controls";
 import { deleteBonusAction } from "@/app/actions/payroll/bonuses";
 import { deleteDeductionAction } from "@/app/actions/payroll/deductions";
+import { deleteSalaryPaymentAction } from "@/app/actions/payroll/salary-payments";
 import { DeleteButton } from "@/components/delete-button";
 import { ArrowLeft, FileText, Printer } from "lucide-react";
 
@@ -50,7 +51,11 @@ export default async function TeacherPayrollPage({
 
   const payroll = await prisma.payroll.findUnique({
     where: { teacherId_month_year: { teacherId: id, month, year } },
-    include: { bonuses: { orderBy: { createdAt: "desc" } }, deductions: { orderBy: { createdAt: "desc" } }, payments: { orderBy: { paymentDate: "desc" } } },
+    include: {
+      bonuses: { orderBy: { createdAt: "desc" } },
+      deductions: { orderBy: { createdAt: "desc" } },
+      payments: { where: { deletedAt: null }, orderBy: { paymentDate: "desc" } },
+    },
   });
 
   const [structure, attendance, outstandingAdvance, previousPending] = await Promise.all([
@@ -241,6 +246,13 @@ export default async function TeacherPayrollPage({
                         <span className="text-muted-foreground">via {p.paymentMode} on {formatDate(p.paymentDate)}</span>
                         {p.referenceNo && <span className="text-muted-foreground"> · Ref: {p.referenceNo}</span>}
                       </div>
+                      {!payroll.locked && (
+                        <DeleteButton
+                          action={deleteSalaryPaymentAction}
+                          hiddenFields={{ id: p.id, payrollId: payroll.id }}
+                          confirmMessage={`Delete this payment of ${formatCurrency(p.amount)}? The payroll's pending balance will increase back by this amount. This cannot be undone.`}
+                        />
+                      )}
                     </div>
                   ))
                 )}

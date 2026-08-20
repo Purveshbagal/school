@@ -51,6 +51,25 @@ export async function saveMarksAction(
     )
   );
 
+  // Keep totalMarks in sync across the rest of the standard for this exam:
+  // a paper's total is the same for every student, so once one student's
+  // entry sets/changes it, carry it over to classmates who already have a
+  // marks row for the same subject/exam (new entries pick it up via the
+  // defaultTotalMarks prefill on the entry page instead).
+  await Promise.all(
+    rows.map((r) =>
+      prisma.marks.updateMany({
+        where: {
+          examId,
+          subjectId: r.subjectId,
+          studentId: { not: studentId },
+          student: { standardId },
+        },
+        data: { totalMarks: r.totalMarks },
+      })
+    )
+  );
+
   revalidatePath(`/exams/marks/${standardId}/${studentId}`);
   redirect(`/exams/marks/${standardId}/${studentId}?examId=${examId}`);
 }

@@ -55,6 +55,7 @@ export default async function PendingFeesByStandardPage({
                   <p className="font-medium">{s.name}</p>
                   <p className="font-mono text-xs text-muted-foreground">{s.admissionNo}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
+                    {s.openingDue > 0 && <>Previous: {formatCurrency(s.openingDue)} · </>}
                     Student: {formatCurrency(s.standardDue)}
                     {s.busDue > 0 && <> · Bus: {formatCurrency(s.busDue)}</>}
                   </p>

@@ -28,6 +28,10 @@ export default async function ReceiptPage({
   const paymentsBefore = await prisma.feePayment.findMany({
     where: {
       studentId: payment.studentId,
+      // Only payments within the same academic year as this one — anything from an
+      // earlier year is already folded into the student's openingBalance (see
+      // src/lib/fees.ts), so counting it again here would double-subtract it.
+      academicYear: payment.academicYear,
       OR: [
         { paymentDate: { lt: payment.paymentDate } },
         { paymentDate: payment.paymentDate, createdAt: { lt: payment.createdAt } },

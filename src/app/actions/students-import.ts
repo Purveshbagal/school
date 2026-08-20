@@ -114,13 +114,18 @@ export async function importStudentsAction(
     const taluka = cellToText(values.taluka);
     const village = cellToText(values.village);
     let villageId: string | null = null;
+    let busFeeSnapshot = 0;
     if (village) {
       const comboMatch = villageByCombo.get(`${district}|${taluka}|${village}`.trim().toLowerCase());
       if (comboMatch) {
         villageId = comboMatch.id;
+        busFeeSnapshot = comboMatch.busFee || 0;
       } else {
         const nameMatches = villageByNameOnly.get(village.trim().toLowerCase());
-        if (nameMatches?.length === 1) villageId = nameMatches[0].id;
+        if (nameMatches?.length === 1) {
+          villageId = nameMatches[0].id;
+          busFeeSnapshot = nameMatches[0].busFee || 0;
+        }
       }
     }
 
@@ -149,6 +154,7 @@ export async function importStudentsAction(
       taluka: taluka || null,
       village: village || null,
       villageId,
+      busFeeSnapshot,
       motherTongue: cellToText(values.motherTongue) || null,
       religion: cellToText(values.religion) || null,
       caste: cellToText(values.caste) || null,

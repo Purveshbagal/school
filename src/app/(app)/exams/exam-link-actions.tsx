@@ -23,7 +23,31 @@ export function ExamLinkActions({
 
   async function copyLink() {
     if (!resultUrl) return;
-    await navigator.clipboard.writeText(resultUrl);
+
+    // navigator.clipboard requires a secure context (HTTPS, or localhost) — on a live
+    // site served over plain HTTP it's undefined, so fall back to the legacy
+    // execCommand approach via a hidden textarea, which works everywhere.
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(resultUrl);
+      } else {
+        throw new Error("Clipboard API unavailable");
+      }
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = resultUrl;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand("copy");
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

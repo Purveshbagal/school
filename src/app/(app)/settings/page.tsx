@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
@@ -9,7 +9,10 @@ import { deleteAccessAction } from "@/app/actions/access";
 import { GRANTABLE_NAV_SECTIONS } from "@/lib/nav-sections";
 import { formatDate, cn } from "@/lib/utils";
 import { LocationsManager } from "./locations/locations-manager";
-import { Plus, Pencil, KeyRound, KeySquare, MapPin } from "lucide-react";
+import { SwitchYearForm } from "./switch-year-form";
+import { UndoYearTransitionButton } from "./undo-year-transition-button";
+import { isYearTransitionRevertible } from "@/app/actions/academic-year";
+import { Plus, Pencil, KeyRound, KeySquare, MapPin, CalendarRange } from "lucide-react";
 
 const LABEL_BY_HREF = new Map(
   GRANTABLE_NAV_SECTIONS.flatMap((section) => section.items.map((item) => [item.href, item.label]))
@@ -18,6 +21,7 @@ const LABEL_BY_HREF = new Map(
 const TABS = [
   { value: "access", label: "Access Control", icon: KeySquare },
   { value: "locations", label: "Village Setting", icon: MapPin },
+  { value: "year", label: "Academic Year", icon: CalendarRange },
 ] as const;
 
 export default async function SettingsPage({
@@ -26,7 +30,7 @@ export default async function SettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab: tabParam } = await searchParams;
-  const tab = tabParam === "locations" ? "locations" : "access";
+  const tab = tabParam === "locations" ? "locations" : tabParam === "year" ? "year" : "access";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -50,7 +54,13 @@ export default async function SettingsPage({
         ))}
       </div>
 
-      {tab === "access" ? <AccessControlPanel /> : <LocationsPanel />}
+      {tab === "access" ? (
+        <AccessControlPanel />
+      ) : tab === "locations" ? (
+        <LocationsPanel />
+      ) : (
+        <AcademicYearPanel />
+      )}
     </div>
   );
 }
@@ -129,5 +139,59 @@ async function LocationsPanel() {
       </p>
       <LocationsManager districts={districts} />
     </>
+  );
+}
+
+async function AcademicYearPanel() {
+  const [settings, activeStudentCount, latestTransition] = await Promise.all([
+    prisma.schoolSettings.findUnique({ where: { id: "main" } }),
+    prisma.student.count({ where: { status: "ACTIVE" } }),
+    prisma.yearTransition.findFirst({ where: { revertedAt: null }, orderBy: { createdAt: "desc" } }),
+  ]);
+  const currentYear = settings?.academicYear || "2026-27";
+
+  const revertInfo = latestTransition
+    ? await isYearTransitionRevertible(latestTransition.id)
+    : null;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Current Academic Year</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <p className="text-3xl font-bold">{currentYear}</p>
+          <p className="text-sm text-muted-foreground">
+            Switching the year promotes every <strong>active</strong> student to their next standard
+            (highest standard stays put) and carries forward any pending fees. Inactive students are
+            left untouched.
+          </p>
+          <SwitchYearForm currentYear={currentYear} activeStudentCount={activeStudentCount} />
+        </CardContent>
+      </Card>
+
+      {latestTransition && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Last Switch</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm">
+              {latestTransition.fromYear} → {latestTransition.toYear} ·{" "}
+              {latestTransition.studentCount} student{latestTransition.studentCount === 1 ? "" : "s"}{" "}
+              promoted · {formatDate(latestTransition.createdAt)}
+            </p>
+            <UndoYearTransitionButton
+              transitionId={latestTransition.id}
+              fromYear={latestTransition.fromYear}
+              toYear={latestTransition.toYear}
+              revertible={revertInfo?.revertible ?? false}
+              reason={revertInfo?.reason}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getStudentFeeSummary } from "@/lib/fees";
+import { getStudentFeeSummary, getPendingFeesStudents } from "@/lib/fees";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PaymentForm } from "@/components/payment-form";
 import { StudentSearch } from "./student-search";
-import { formatDateInput } from "@/lib/utils";
+import { formatCurrency, formatDateInput } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 
 export default async function NewPaymentPage({
@@ -78,6 +78,8 @@ export default async function NewPaymentPage({
       })
     : [];
 
+  const pendingStudents = !q ? await getPendingFeesStudents() : [];
+
   return (
     <div className="mx-auto max-w-lg">
       <PageHeader
@@ -93,9 +95,38 @@ export default async function NewPaymentPage({
           <StudentSearch initialQuery={q || ""} />
 
           {!q ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Start typing a student&apos;s name, admission number, father&apos;s name, or phone to search.
-            </p>
+            pendingStudents.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                No students with pending fees. Start typing a name, admission number, father&apos;s
+                name, or phone to search.
+              </p>
+            ) : (
+              <>
+                <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Pending Fees
+                </p>
+                <div className="space-y-2">
+                  {pendingStudents.map((s) => (
+                    <Link
+                      key={s.id}
+                      href={`/payments/new?student=${s.id}`}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 transition hover:border-primary/50 hover:bg-accent/40"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">{s.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.admissionNo} · Standard {s.standardName}
+                          {s.fatherName ? ` · ${s.fatherName}` : ""}
+                        </p>
+                      </div>
+                      <Badge variant="destructive" className="shrink-0">
+                        {formatCurrency(s.due)}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )
           ) : students.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               No matching students found.

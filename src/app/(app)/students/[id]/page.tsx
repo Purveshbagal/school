@@ -29,7 +29,8 @@ export default async function StudentDetailPage({
   const summary = await getStudentFeeSummary(id);
   if (!summary) notFound();
 
-  const { student, standardFee, busFee, totalFee, totalPaid, due, advance, feeStructure } = summary;
+  const { student, standardFee, busFee, openingBalance, totalFee, totalPaid, due, advance, feeStructure } =
+    summary;
 
   return (
     <div>
@@ -66,9 +67,11 @@ export default async function StudentDetailPage({
               <CardContent>
                 <p className="text-xs text-muted-foreground">Total Fee</p>
                 <p className="mt-1 text-lg font-semibold">{formatCurrency(totalFee)}</p>
-                {busFee > 0 && (
+                {(openingBalance > 0 || busFee > 0) && (
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Student: {formatCurrency(standardFee)} + Bus: {formatCurrency(busFee)}
+                    {openingBalance > 0 && <>Previous: {formatCurrency(openingBalance)} + </>}
+                    Student: {formatCurrency(standardFee)}
+                    {busFee > 0 && <> + Bus: {formatCurrency(busFee)}</>}
                   </p>
                 )}
               </CardContent>

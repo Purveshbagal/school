@@ -18,28 +18,30 @@ export async function GET(request: NextRequest) {
     board: params.get("board") || undefined,
   });
 
-  const [students, feeStructures, villages] = await Promise.all([
+  const [students, feeStructures] = await Promise.all([
     prisma.student.findMany({
       where,
       include: { standard: true, payments: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.feeStructure.findMany(),
-    prisma.village.findMany({ select: { id: true, busFee: true } }),
   ]);
 
   const feeStructureMap = new Map(
     feeStructures.map((fs) => [`${fs.standardId}_${fs.academicYear}`, fs.totalAmount])
   );
-  const villageBusFeeMap = new Map(villages.map((v) => [v.id, v.busFee]));
 
   const rows = students.map((s) => {
     const baseFee =
       s.customFee ?? feeStructureMap.get(`${s.standardId}_${s.academicYear}`) ?? 0;
     const standardFee = Math.max(0, baseFee - (s.discount || 0));
-    const busFee = s.schoolBus ? (s.villageId && villageBusFeeMap.get(s.villageId)) || 0 : 0;
-    const totalFee = standardFee + busFee;
-    const totalPaid = s.payments.reduce((sum, p) => sum + p.amount, 0);
+    const busFee = s.schoolBus ? s.busFeeSnapshot || 0 : 0;
+    const totalFee = s.openingBalance + standardFee + busFee;
+    // Year-scoped — see src/lib/fees.ts for why (avoids double-counting pre-switch payments
+    // that are already folded into openingBalance).
+    const totalPaid = s.payments
+      .filter((p) => p.academicYear === s.academicYear)
+      .reduce((sum, p) => sum + p.amount, 0);
     const balance = totalFee - totalPaid;
 
     const values: Record<string, string | number> = {

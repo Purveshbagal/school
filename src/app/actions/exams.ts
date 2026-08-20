@@ -27,9 +27,10 @@ export async function createExamAction(formData: FormData): Promise<void> {
 
 export async function deleteExamAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
-  const marksCount = await prisma.marks.count({ where: { examId: id } });
-  if (marksCount > 0) return;
-  await prisma.exam.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.marks.deleteMany({ where: { examId: id } }),
+    prisma.exam.delete({ where: { id } }),
+  ]);
   revalidatePath("/exams");
 }
 

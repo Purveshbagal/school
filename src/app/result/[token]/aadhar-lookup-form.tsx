@@ -4,10 +4,9 @@ import { useState, useTransition } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MarksSummaryTable } from "@/components/marks-summary-table";
 import { DocumentHeader } from "@/components/document-header";
-import { DocumentWatermark } from "@/components/document-watermark";
 import { PrintDownloadActions } from "@/components/print-download-actions";
+import { ResultCard } from "./result-card";
 import { lookupResultAction, type ResultLookupResult } from "@/app/actions/marks";
 
 export function AadharLookupForm({
@@ -43,29 +42,22 @@ export function AadharLookupForm({
           <PrintDownloadActions targetId="exam-result-card" fileName={`Result-${result.studentName}`} />
         </div>
 
-        <div id="exam-result-card" className="relative overflow-hidden rounded-xl border border-pink-100 bg-white p-5">
-          <DocumentWatermark />
+        <ResultCard
+          schoolName={schoolName}
+          studentName={result.studentName}
+          standardName={result.standardName}
+          examName={result.examName}
+          rows={result.rows}
+          totalObtained={result.totalObtained}
+          totalMax={result.totalMax}
+          percentage={result.percentage}
+        />
 
-          <div className="relative z-10 space-y-4">
-            <DocumentHeader docType="Exam Result" schoolName={schoolName} />
-
-            <div>
-              <p className="font-medium">{result.studentName}</p>
-              <p className="text-sm text-muted-foreground">
-                {result.standardName} · {result.examName}
-              </p>
-            </div>
-
-            <MarksSummaryTable
-              rows={result.rows}
-              totalObtained={result.totalObtained}
-              totalMax={result.totalMax}
-              percentage={result.percentage}
-            />
-          </div>
-        </div>
-
-        <Button variant="outline" className="w-full" onClick={() => setResult(null)}>
+        <Button
+          variant="outline"
+          className="w-full border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+          onClick={() => setResult(null)}
+        >
           Check Another
         </Button>
       </div>

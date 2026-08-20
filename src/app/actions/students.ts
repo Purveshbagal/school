@@ -71,6 +71,14 @@ function readCommonFields(formData: FormData) {
   };
 }
 
+/** Bus fee locked in at save time — later changes to the village's fee shouldn't
+ * retroactively change what an already-saved student owes (only re-synced on "Switch Year"). */
+async function currentVillageBusFee(villageId: string | null): Promise<number> {
+  if (!villageId) return 0;
+  const village = await prisma.village.findUnique({ where: { id: villageId }, select: { busFee: true } });
+  return village?.busFee || 0;
+}
+
 export async function createStudentAction(
   _prevState: { error?: string } | undefined,
   formData: FormData
@@ -81,9 +89,11 @@ export async function createStudentAction(
     return { error: "Register number, name, standard and academic year are required" };
   }
 
+  const busFeeSnapshot = await currentVillageBusFee(fields.villageId);
+
   let student;
   try {
-    student = await prisma.student.create({ data: fields });
+    student = await prisma.student.create({ data: { ...fields, busFeeSnapshot } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { error: "A student with this register number already exists" };
@@ -107,10 +117,12 @@ export async function updateStudentAction(
     return { error: "Register number, name, standard and academic year are required" };
   }
 
+  const busFeeSnapshot = await currentVillageBusFee(fields.villageId);
+
   try {
     await prisma.student.update({
       where: { id },
-      data: { ...fields, status },
+      data: { ...fields, status, busFeeSnapshot },
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

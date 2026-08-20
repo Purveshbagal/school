@@ -19,6 +19,7 @@ export function MarksForm({
   exams,
   selectedExamId,
   existingMarks,
+  defaultTotalMarks,
 }: {
   studentId: string;
   standardId: string;
@@ -27,6 +28,7 @@ export function MarksForm({
   exams: Exam[];
   selectedExamId: string;
   existingMarks: Record<string, { marksObtained: number; totalMarks: number }>;
+  defaultTotalMarks: Record<string, number>;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(saveMarksAction, undefined);
@@ -55,12 +57,13 @@ export function MarksForm({
       <div className="space-y-3">
         {subjects.map((subject) => {
           const existing = existingMarks[subject.id];
+          const totalMarksValue = existing?.totalMarks ?? defaultTotalMarks[subject.id];
           // Remount (not just re-render) whenever the server-loaded saved values
           // for this subject/exam actually change — e.g. switching the exam
           // dropdown, or right after a save populates previously-empty marks.
           // Otherwise Base UI's uncontrolled Input warns about defaultValue
           // changing after the initial mount.
-          const rowKey = `${subject.id}-${selectedExamId}-${existing?.marksObtained ?? "x"}-${existing?.totalMarks ?? "x"}`;
+          const rowKey = `${subject.id}-${selectedExamId}-${existing?.marksObtained ?? "x"}-${totalMarksValue ?? "x"}`;
           return (
             <div key={rowKey} className="rounded-lg border border-border p-3">
               <input type="hidden" name="subjectId" value={subject.id} />
@@ -89,7 +92,7 @@ export function MarksForm({
                     type="number"
                     step="0.01"
                     min="0"
-                    defaultValue={existing?.totalMarks}
+                    defaultValue={totalMarksValue}
                   />
                 </div>
               </div>

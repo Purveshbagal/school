@@ -36,6 +36,22 @@ export default async function StudentMarksEntryPage({
     : [];
   const marksBySubjectId = new Map(existingMarks.map((m) => [m.subjectId, m]));
 
+  // Auto-fill total marks from whatever another student in this standard
+  // already entered for the same subject/exam, so the teacher only has to
+  // type the obtained marks for everyone after the first student.
+  const standardMarks = examId
+    ? await prisma.marks.findMany({
+        where: { examId, subject: { standardId } },
+        orderBy: { updatedAt: "desc" },
+      })
+    : [];
+  const defaultTotalMarksBySubjectId = new Map<string, number>();
+  for (const m of standardMarks) {
+    if (!defaultTotalMarksBySubjectId.has(m.subjectId)) {
+      defaultTotalMarksBySubjectId.set(m.subjectId, m.totalMarks);
+    }
+  }
+
   const summaryRows = existingMarks.map((m) => ({
     subjectName: m.subject.name,
     marksObtained: m.marksObtained,
@@ -80,6 +96,7 @@ export default async function StudentMarksEntryPage({
                     { marksObtained: m.marksObtained, totalMarks: m.totalMarks },
                   ])
                 )}
+                defaultTotalMarks={Object.fromEntries(defaultTotalMarksBySubjectId)}
               />
             )}
           </CardContent>

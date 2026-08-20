@@ -17,9 +17,9 @@ export default async function ExamResultPage({
   const schoolName = settings?.name || "School";
 
   return (
-    <div className="min-h-screen bg-pink-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-3 py-6 sm:px-4 sm:py-10">
-        <div className="rounded-2xl border border-pink-100 bg-white p-4 shadow-sm sm:p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           {!linkAvailable ? (
             <>
               <DocumentHeader

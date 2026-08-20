@@ -15,6 +15,23 @@ export async function createStandardAction(formData: FormData): Promise<void> {
   revalidatePath("/standards");
 }
 
+export async function updateStandardPromotionAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id"));
+  const board = String(formData.get("board") || "").trim();
+  const promotesToId = String(formData.get("promotesToId") || "").trim();
+
+  await prisma.standard.update({
+    where: { id },
+    data: {
+      board: board || null,
+      promotesToId: promotesToId || null,
+    },
+  });
+
+  revalidatePath("/standards");
+  revalidatePath(`/standards/${id}`);
+}
+
 export async function deleteStandardAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
   const studentCount = await prisma.student.count({ where: { standardId: id } });

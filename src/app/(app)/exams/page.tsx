@@ -60,7 +60,7 @@ export default async function ExamsPage() {
                         <DeleteButton
                           action={deleteExamAction}
                           hiddenFields={{ id: exam.id }}
-                          confirmMessage={`Delete exam "${exam.name}"? This cannot be undone.`}
+                          confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
                         />
                         <ExamLinkActions
                           examId={exam.id}
@@ -108,7 +108,7 @@ export default async function ExamsPage() {
                           <DeleteButton
                             action={deleteExamAction}
                             hiddenFields={{ id: exam.id }}
-                            confirmMessage={`Delete exam "${exam.name}"? This cannot be undone.`}
+                            confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
                           />
                         </TableCell>
                       </TableRow>

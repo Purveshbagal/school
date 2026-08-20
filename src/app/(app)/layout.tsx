@@ -34,7 +34,7 @@ export default async function AppLayout({
           permissions={permissions}
           notifications={notifications}
         />
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-8 2xl:px-12">
           {children}
         </main>
       </div>

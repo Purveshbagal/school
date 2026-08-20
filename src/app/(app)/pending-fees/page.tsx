@@ -7,19 +7,30 @@ import { formatCurrency } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
 export default async function PendingFeesPage() {
-  const { grandTotal, grandTotalStandard, grandTotalBus, groups } = await getPendingFeesReport();
+  const { grandTotal, grandTotalOpening, grandTotalStandard, grandTotalBus, groups } =
+    await getPendingFeesReport();
 
   return (
     <div>
       <PageHeader title="Pending Fees" description="Standard-wise breakdown of outstanding fees" />
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <Card className="border-t-2 border-t-destructive">
           <CardContent>
             <p className="text-xs text-muted-foreground">Total Pending Amount</p>
             <p className="mt-1 text-3xl font-bold text-destructive">{formatCurrency(grandTotal)}</p>
           </CardContent>
         </Card>
+        {grandTotalOpening > 0 && (
+          <Card size="sm" className="border-t-2 border-t-amber-400">
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Previous Year Pending</p>
+              <p className="mt-1 text-lg font-semibold text-amber-600">
+                {formatCurrency(grandTotalOpening)}
+              </p>
+            </CardContent>
+          </Card>
+        )}
         <Card size="sm" className="border-t-2 border-t-primary">
           <CardContent>
             <p className="text-xs text-muted-foreground">Student Fees Pending</p>

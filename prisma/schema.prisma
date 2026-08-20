@@ -14,6 +14,15 @@ model Standard {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   name          String         @unique
   order         Int            @default(0)
+  /// Board this standard belongs to (e.g. "CBSE", "Maharashtra State Board"). When set,
+  /// "Switch Academic Year" updates a promoted student's `board` to match.
+  board         String?
+  /// Explicit override for which standard "Switch Academic Year" promotes into — falls
+  /// back to the next standard by `order` when unset. Needed when tracks diverge (e.g.
+  /// a CBSE-only track that rejoins the main track at a later standard).
+  promotesToId  String?        @db.ObjectId
+  promotesTo    Standard?      @relation("StandardPromotion", fields: [promotesToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  promotedFrom  Standard[]     @relation("StandardPromotion")
   students      Student[]
   feeStructures FeeStructure[]
   subjects      Subject[]
@@ -78,6 +87,9 @@ model Student {
   medium        String?
   board         String?
   schoolBus     Boolean      @default(false)
+  /// Bus fee locked in from the student's village at the last save (create/edit/promotion).
+  /// Later changes to the village's bus fee don't retroactively affect already-saved students.
+  busFeeSnapshot Float       @default(0)
   standardId    String       @db.ObjectId
   standard      Standard     @relation(fields: [standardId], references: [id])
   academicYear  String
@@ -85,6 +97,8 @@ model Student {
   status        String       @default("ACTIVE")
   customFee     Float?
   discount      Float        @default(0)
+  /// Fee balance carried forward from a prior year at the last "Switch Academic Year" promotion.
+  openingBalance Float       @default(0)
   photoUrl      String?
   payments      FeePayment[]
   leavingCertificates LeavingCertificate[]
@@ -335,6 +349,36 @@ model SchoolSettings {
   email         String?
   principalName String?
   academicYear  String  @default("2026-27")
+}
+
+/// Snapshot of a "Switch Academic Year" bulk promotion, kept so the most recent
+/// switch can be undone as long as nothing else has touched the affected students.
+model YearTransition {
+  id           String                 @id @default(auto()) @map("_id") @db.ObjectId
+  fromYear     String
+  toYear       String
+  studentCount Int
+  createdAt    DateTime               @default(now())
+  revertedAt   DateTime?
+  entries      YearTransitionEntry[]
+}
+
+type YearTransitionEntry {
+  studentId           String @db.ObjectId
+  fromStandardId      String @db.ObjectId
+  toStandardId        String @db.ObjectId
+  fromOpeningBalance  Float
+  toOpeningBalance    Float
+  fromBusFeeSnapshot  Float
+  toBusFeeSnapshot    Float
+  fromBoard           String?
+  toBoard             String?
+  /// customFee is a manual per-student override of the standard's fee structure.
+  /// It's tied to the standard it was set for, so it's cleared whenever a
+  /// promotion moves the student into a different standard — otherwise the old
+  /// override keeps overriding the new standard's live fee structure forever.
+  fromCustomFee       Float?
+  toCustomFee         Float?
 }
 
 // =====================================================================

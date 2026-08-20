@@ -37,6 +37,7 @@ export async function createNotification(
  * this is a no-op placeholder so wiring a real provider later is a config-only
  * change (fill in the body, add credentials to .env) with no call-site changes.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature documents the intended payload shape for the future provider
 export async function sendExternalNotification(_input: {
   channel: "EMAIL" | "WHATSAPP";
   to: string;

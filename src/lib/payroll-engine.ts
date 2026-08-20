@@ -70,6 +70,7 @@ export function calcGrossSalary(
   monthlySalary: number,
   calculationType: CalculationType,
   attendance: Pick<AttendanceInput, "workingDays">,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for signature symmetry with perDayRate at the shared call site
   settings: Pick<PayrollSettingsInput, "workingDaysPerMonth">
 ): number {
   if (calculationType === "PER_DAY") return monthlySalary * attendance.workingDays;

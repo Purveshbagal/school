@@ -25,14 +25,16 @@ export function LocationsManager({ districts }: { districts: District[] }) {
   function toggleDistrict(id: string) {
     setOpenDistricts((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
   function toggleTaluka(id: string) {
     setOpenTalukas((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }

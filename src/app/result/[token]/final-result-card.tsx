@@ -101,7 +101,8 @@ export function FinalResultCard({
   totalMax: number;
   percentage: number;
 }) {
-  const overallPass = percentage >= PASS_PERCENT;
+  // Result always shows as Pass, regardless of marks scored.
+  const overallPass = true;
   const growth =
     terms.length > 1 ? terms[terms.length - 1].percentage - terms[0].percentage : 0;
 

@@ -59,7 +59,8 @@ export function ResultCard({
   rank: number;
   totalStudents: number;
 }) {
-  const overallPass = rows.every((r) => (r.totalMarks > 0 ? (r.marksObtained / r.totalMarks) * 100 : 0) >= PASS_PERCENT);
+  // Result always shows as Pass, regardless of marks scored.
+  const overallPass = true;
 
   return (
     <div

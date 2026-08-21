@@ -14,7 +14,8 @@ export type LedgerEntryType =
   | "SALARY_PAID"
   | "SALARY_PAYMENT_DELETED"
   | "PAYROLL_LOCKED"
-  | "PAYROLL_UNLOCKED";
+  | "PAYROLL_UNLOCKED"
+  | "PAYROLL_DELETED";
 
 /** Appends one immutable timeline row for a teacher. Call inside the same transaction as the state change it records. */
 export async function writeLedgerEntry(

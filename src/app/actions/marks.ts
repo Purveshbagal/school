@@ -32,6 +32,17 @@ export async function saveMarksAction(
     return { error: "Enter marks for at least one subject" };
   }
 
+  const overLimit = rows.filter((r) => r.marksObtained > r.totalMarks);
+  if (overLimit.length > 0) {
+    const subjects = await prisma.subject.findMany({
+      where: { id: { in: overLimit.map((r) => r.subjectId) } },
+      select: { name: true },
+    });
+    return {
+      error: `Marks obtained cannot exceed total marks (${subjects.map((s) => s.name).join(", ")})`,
+    };
+  }
+
   await Promise.all(
     rows.map((r) =>
       prisma.marks.upsert({

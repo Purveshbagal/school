@@ -81,7 +81,7 @@ async function computePendingByStudent() {
     const openingDue = Math.max(0, openingBalance - openingPaid);
     const standardDue = Math.max(0, standardFee - standardPaid);
     const busDue = Math.max(0, busFee - busPaid);
-    return { student, due, openingDue, standardDue, busDue };
+    return { student, totalFee, due, openingDue, standardDue, busDue };
   });
 
   return pendingByStudent;
@@ -117,6 +117,20 @@ export async function getPendingFeesReport() {
   });
 
   return { grandTotal, grandTotalOpening, grandTotalStandard, grandTotalBus, groups };
+}
+
+/** Total fees owed by all active students, split into what's been collected toward that
+ * fee and what's still pending — collected is capped per-student at their total fee, so
+ * totalFees === totalCollected + totalPending always, exactly (advance payments beyond a
+ * student's fee aren't counted here since they aren't part of what's "owed"). */
+export async function getFeesOverview() {
+  const pendingByStudent = await computePendingByStudent();
+
+  const totalFees = pendingByStudent.reduce((sum, p) => sum + p.totalFee, 0);
+  const totalPending = pendingByStudent.reduce((sum, p) => sum + p.due, 0);
+  const totalCollected = totalFees - totalPending;
+
+  return { totalFees, totalCollected, totalPending };
 }
 
 /** Flat, highest-due-first list of active students who still owe fees — used as the

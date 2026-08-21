@@ -12,7 +12,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { getPendingFeesReport } from "@/lib/fees";
+import { getFeesOverview } from "@/lib/fees";
 import { getPendingSalaryReport } from "@/lib/payroll-reports";
 import { getPendingStationaryReport } from "@/lib/stationary";
 import {
@@ -74,8 +74,7 @@ export default async function DashboardPage() {
     standards,
     busCount,
     examCount,
-    feesCollected,
-    pendingFees,
+    feesOverview,
     pendingSalary,
     pendingStationary,
     recentPayments,
@@ -89,8 +88,7 @@ export default async function DashboardPage() {
     prisma.standard.count(),
     prisma.bus.count(),
     prisma.exam.count(),
-    prisma.feePayment.aggregate({ _sum: { amount: true } }),
-    getPendingFeesReport(),
+    getFeesOverview(),
     getPendingSalaryReport(),
     getPendingStationaryReport(),
     prisma.feePayment.findMany({
@@ -112,7 +110,6 @@ export default async function DashboardPage() {
     prisma.exam.findMany({ where: { NOT: { isFinal: true } }, orderBy: { examDate: "desc" }, take: 5 }),
   ]);
 
-  const totalCollected = feesCollected._sum.amount || 0;
   const totalSalaryPending = pendingSalary.reduce((sum, p) => sum + p.pendingAmount, 0);
 
   const primaryStats = [
@@ -135,22 +132,13 @@ export default async function DashboardPage() {
       href: "/teachers",
     },
     {
-      label: "Fees Collected",
-      value: formatCurrency(totalCollected),
-      sub: "All time",
+      label: "Total Fees",
+      value: formatCurrency(feesOverview.totalFees),
+      sub: "All active students · tap for breakup",
       icon: IndianRupee,
       tone: "text-success bg-success/10",
       border: "border-t-success",
-      href: "/payments",
-    },
-    {
-      label: "Fees Due",
-      value: formatCurrency(pendingFees.grandTotal),
-      sub: "Outstanding balance",
-      icon: AlertCircle,
-      tone: "text-destructive bg-destructive/10",
-      border: "border-t-destructive",
-      href: "/pending-fees",
+      href: "/fees-overview",
     },
   ];
 

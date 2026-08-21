@@ -577,7 +577,7 @@ model SalaryLedger {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   teacherId   String   @db.ObjectId
   teacher     Teacher  @relation(fields: [teacherId], references: [id])
-  type        String // SALARY_GENERATED | ADVANCE_GIVEN | ADVANCE_EDITED | ADVANCE_DELETED | BONUS_ADDED | DEDUCTION_ADDED | SALARY_PAID | SALARY_REVISED | PAYROLL_LOCKED | PAYROLL_UNLOCKED
+  type        String // SALARY_GENERATED | ADVANCE_GIVEN | ADVANCE_EDITED | ADVANCE_DELETED | BONUS_ADDED | DEDUCTION_ADDED | SALARY_PAID | SALARY_REVISED | PAYROLL_LOCKED | PAYROLL_UNLOCKED | PAYROLL_DELETED
   amount      Float    @default(0)
   description String
   refId       String?

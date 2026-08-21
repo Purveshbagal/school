@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { deleteTeacherAction } from "@/app/actions/teachers";
+import { deletePayrollAction } from "@/app/actions/payroll/payroll";
+import { deleteAdvanceAction } from "@/app/actions/payroll/advance-payments";
+import { deleteSalaryPaymentAction } from "@/app/actions/payroll/salary-payments";
 import { Pencil, TrendingUp, CircleDollarSign, HandCoins, History } from "lucide-react";
 
 export default async function TeacherDetailPage({
@@ -36,6 +39,8 @@ export default async function TeacherDetailPage({
   ]);
   const pendingFromLastPayroll = lastPayroll ? Math.max(0, lastPayroll.pendingAmount) : 0;
 
+  const payrollLockedMap = new Map(payrolls.map((p) => [p.id, p.locked]));
+
   // Generated column — salary generated from attendance, no paid/pending status shown.
   const generateEntries = payrolls
     .map((p) => ({
@@ -45,6 +50,8 @@ export default async function TeacherDetailPage({
       amount: p.netPayable,
       month: p.month,
       year: p.year,
+      locked: p.locked,
+      paidAmount: p.paidAmount,
     }))
     .sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -56,6 +63,7 @@ export default async function TeacherDetailPage({
       date: a.date,
       amount: a.amount,
       note: a.note,
+      status: a.status,
     })),
     ...salaryPayments.map((p) => ({
       kind: "payment" as const,
@@ -63,6 +71,7 @@ export default async function TeacherDetailPage({
       date: p.paymentDate,
       amount: p.amount,
       mode: p.paymentMode,
+      payrollId: p.payrollId,
     })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -169,19 +178,25 @@ export default async function TeacherDetailPage({
                   ) : (
                     <div className="space-y-2">
                       {filteredGenerateEntries.map((entry) => (
-                        <Link
+                        <div
                           key={`salary-${entry.id}`}
-                          href={`/payroll/${id}?month=${entry.month}&year=${entry.year}`}
                           className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-accent/50"
                         >
-                          <div className="min-w-0">
+                          <Link href={`/payroll/${id}?month=${entry.month}&year=${entry.year}`} className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="info">Salary</Badge>
                               <span className="text-xs text-muted-foreground">{MONTH_NAMES[entry.month - 1]} {entry.year}</span>
                             </div>
                             <p className="mt-1 font-medium">{formatCurrency(entry.amount)}</p>
-                          </div>
-                        </Link>
+                          </Link>
+                          {!entry.locked && entry.paidAmount === 0 && (
+                            <DeleteButton
+                              action={deletePayrollAction}
+                              hiddenFields={{ id: entry.id }}
+                              confirmMessage={`Delete the generated salary of ${formatCurrency(entry.amount)} for ${MONTH_NAMES[entry.month - 1]} ${entry.year}? This cannot be undone.`}
+                            />
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -206,20 +221,26 @@ export default async function TeacherDetailPage({
                     <div className="space-y-2">
                       {filteredPaidEntries.map((entry) =>
                         entry.kind === "advance" ? (
-                          <Link
+                          <div
                             key={`advance-${entry.id}`}
-                            href={`/advance-payments/${id}`}
                             className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-accent/50"
                           >
-                            <div className="min-w-0">
+                            <Link href={`/advance-payments/${id}`} className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <Badge variant="warning">Advance</Badge>
                                 <span className="text-xs text-muted-foreground">{formatDate(entry.date)}</span>
                               </div>
                               <p className="mt-1 font-medium">{formatCurrency(entry.amount)}</p>
                               {entry.note && <p className="truncate text-xs text-muted-foreground">{entry.note}</p>}
-                            </div>
-                          </Link>
+                            </Link>
+                            {entry.status === "UNADJUSTED" && (
+                              <DeleteButton
+                                action={deleteAdvanceAction}
+                                hiddenFields={{ id: entry.id, teacherId: id }}
+                                confirmMessage={`Delete this advance of ${formatCurrency(entry.amount)}? This cannot be undone.`}
+                              />
+                            )}
+                          </div>
                         ) : (
                           <div
                             key={`payment-${entry.id}`}
@@ -232,6 +253,13 @@ export default async function TeacherDetailPage({
                               </div>
                               <p className="mt-1 font-medium">{formatCurrency(entry.amount)}</p>
                             </div>
+                            {!payrollLockedMap.get(entry.payrollId) && (
+                              <DeleteButton
+                                action={deleteSalaryPaymentAction}
+                                hiddenFields={{ id: entry.id, payrollId: entry.payrollId }}
+                                confirmMessage={`Delete this payment of ${formatCurrency(entry.amount)}? The payroll's pending balance will increase back by this amount. This cannot be undone.`}
+                              />
+                            )}
                           </div>
                         )
                       )}

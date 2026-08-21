@@ -186,6 +186,70 @@ export async function generatePayrollAction(
   return { success: true };
 }
 
+export async function deletePayrollAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") || "");
+
+  const payroll = await prisma.payroll.findUnique({ where: { id } });
+  if (!payroll || payroll.deletedAt || payroll.locked) return;
+
+  const session = await getSession();
+
+  await prisma.$transaction(async (tx) => {
+    // Deleting the payroll undoes the whole thing, so any payments already recorded
+    // against it are removed too.
+    const payments = await tx.salaryPayment.findMany({ where: { payrollId: id, deletedAt: null } });
+    for (const p of payments) {
+      await tx.salaryPayment.update({ where: { id: p.id }, data: { deletedAt: new Date(), updatedBy: session?.username } });
+    }
+
+    // Give back whatever advance this payroll consumed — most recently given advances
+    // first, mirroring a reversal of the oldest-first order it was applied in.
+    let remaining = payroll.advanceApplied;
+    if (remaining > 0) {
+      const advances = await tx.advancePayment.findMany({
+        where: { teacherId: payroll.teacherId, deletedAt: null, adjustedAmount: { gt: 0 } },
+        orderBy: { date: "desc" },
+      });
+      for (const adv of advances) {
+        if (remaining <= 0) break;
+        const refund = Math.min(remaining, adv.adjustedAmount);
+        const newAdjusted = adv.adjustedAmount - refund;
+        await tx.advancePayment.update({
+          where: { id: adv.id },
+          data: {
+            adjustedAmount: newAdjusted,
+            status: newAdjusted <= 0 ? "UNADJUSTED" : "PARTIALLY_ADJUSTED",
+            updatedBy: session?.username,
+          },
+        });
+        remaining -= refund;
+      }
+    }
+
+    await tx.payroll.update({
+      where: { id },
+      data: { deletedAt: new Date(), updatedBy: session?.username },
+    });
+
+    await writeLedgerEntry(tx, {
+      teacherId: payroll.teacherId,
+      type: "PAYROLL_DELETED",
+      amount: payroll.netPayable,
+      description: `Payroll for ${payroll.month}/${payroll.year} deleted`,
+      refId: id,
+      createdBy: session?.username,
+    });
+  });
+
+  revalidatePath(`/payroll/${payroll.teacherId}`);
+  revalidatePath("/payroll");
+  revalidatePath("/salary-slips");
+  revalidatePath("/advance-payments");
+  revalidatePath(`/teachers/${payroll.teacherId}`);
+  revalidatePath("/payroll-reports");
+  revalidatePath("/dashboard");
+}
+
 export async function lockPayrollAction(
   _prevState: { error?: string } | undefined,
   formData: FormData

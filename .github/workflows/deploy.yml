@@ -20,6 +20,10 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          # Give the connection more time before failing, so a transient network
+          # blip between the runner and the VPS doesn't fail the whole deploy outright.
+          timeout: 60s
+          command_timeout: 15m
           script: |
             cd /var/www/school
             git remote set-url origin https://rushiravtale:${{ secrets.GIT_TOKEN }}@github.com/Purveshbagal/school.git

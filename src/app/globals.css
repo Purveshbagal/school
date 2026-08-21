@@ -163,6 +163,14 @@
     size: A5 landscape;
     margin: 0;
   }
+  /* Opt-in named page for documents that need A5 portrait, e.g. the fee structure. */
+  .print-a5-portrait {
+    page: a5-portrait;
+  }
+  @page a5-portrait {
+    size: A5 portrait;
+    margin: 0;
+  }
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

@@ -149,7 +149,6 @@ export default async function ReceiptPage({
             <p className="text-slate-500">Teacher Sign</p>
           </div>
         </div>
-        <p className="mt-4 text-center text-xs text-slate-400">This is a computer generated receipt.</p>
       </div>
     </div>
   );

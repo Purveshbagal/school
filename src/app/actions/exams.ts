@@ -27,6 +27,9 @@ export async function createExamAction(formData: FormData): Promise<void> {
 
 export async function deleteExamAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id"));
+  const exam = await prisma.exam.findUnique({ where: { id } });
+  if (!exam || exam.isFinal) return;
+
   await prisma.$transaction([
     prisma.marks.deleteMany({ where: { examId: id } }),
     prisma.exam.delete({ where: { id } }),

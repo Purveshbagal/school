@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Loader2 } from "lucide-react";
+import { Printer, Download, Image as ImageIcon, Loader2 } from "lucide-react";
 
 export function PrintDownloadActions({
   targetId,
@@ -16,25 +16,27 @@ export function PrintDownloadActions({
   pdfOrientation?: "portrait" | "landscape";
 }) {
   const [downloading, setDownloading] = useState(false);
+  const [downloadingJpg, setDownloadingJpg] = useState(false);
+
+  async function captureCanvas() {
+    const element = document.getElementById(targetId);
+    if (!element) return null;
+
+    const { default: html2canvas } = await import("html2canvas-pro");
+    return html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+    });
+  }
 
   async function handleDownload() {
-    const element = document.getElementById(targetId);
-    if (!element) return;
-
     setDownloading(true);
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas-pro"),
-        import("jspdf"),
-      ]);
+      const [canvas, { jsPDF }] = await Promise.all([captureCanvas(), import("jspdf")]);
+      if (!canvas) return;
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
       const imgData = canvas.toDataURL("image/png");
-
       const pdf = new jsPDF({ orientation: pdfOrientation, unit: "mm", format: pdfFormat });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -60,8 +62,27 @@ export function PrintDownloadActions({
     }
   }
 
+  async function handleDownloadJpg() {
+    setDownloadingJpg(true);
+    try {
+      const canvas = await captureCanvas();
+      if (!canvas) return;
+
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/jpeg", 0.95);
+      link.download = `${fileName}.jpg`;
+      link.click();
+    } finally {
+      setDownloadingJpg(false);
+    }
+  }
+
   return (
     <div className="flex flex-wrap justify-end gap-2 print:hidden">
+      <Button variant="outline" onClick={handleDownloadJpg} disabled={downloadingJpg}>
+        {downloadingJpg ? <Loader2 className="animate-spin" /> : <ImageIcon />}
+        {downloadingJpg ? "Preparing..." : "Download JPG"}
+      </Button>
       <Button variant="outline" onClick={handleDownload} disabled={downloading}>
         {downloading ? <Loader2 className="animate-spin" /> : <Download />}
         {downloading ? "Preparing..." : "Download PDF"}

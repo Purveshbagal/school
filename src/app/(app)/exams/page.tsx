@@ -10,12 +10,15 @@ import { Label } from "@/components/ui/label";
 import { DeleteButton } from "@/components/delete-button";
 import { formatDate } from "@/lib/utils";
 import { createExamAction, deleteExamAction } from "@/app/actions/exams";
+import { ensureFinalResultExam } from "@/lib/exams";
 import { ExamLinkActions } from "./exam-link-actions";
 import { Plus } from "lucide-react";
 
 export default async function ExamsPage() {
+  await ensureFinalResultExam();
+
   const [exams, hdrs] = await Promise.all([
-    prisma.exam.findMany({ orderBy: { examDate: "desc" } }),
+    prisma.exam.findMany({ orderBy: [{ isFinal: "desc" }, { examDate: "desc" }] }),
     headers(),
   ]);
   const host = hdrs.get("host") || "localhost:3000";
@@ -44,24 +47,40 @@ export default async function ExamsPage() {
                 {/* Mobile card list */}
                 <div className="space-y-3 md:hidden">
                   {exams.map((exam) => (
-                    <div key={exam.id} className="rounded-xl border border-border p-3.5">
+                    <div
+                      key={exam.id}
+                      className={`rounded-xl border p-3.5 ${exam.isFinal ? "border-blue-200 bg-blue-50" : "border-border"}`}
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-medium">{exam.name}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            Exam: {formatDate(exam.examDate)} · Result: {formatDate(exam.resultDate)}
+                          <p className="flex items-center gap-1.5 font-medium">
+                            {exam.name}
+                            {exam.isFinal && <Badge variant="info">Default</Badge>}
                           </p>
+                          {exam.isFinal ? (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Combined result across all terms, for parents
+                            </p>
+                          ) : (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Exam: {formatDate(exam.examDate)} · Result: {formatDate(exam.resultDate)}
+                            </p>
+                          )}
                         </div>
                         <Badge variant={exam.resultLinkActive ? "success" : "outline"}>
                           {exam.resultLinkActive ? "Link Active" : "Link Off"}
                         </Badge>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                        <DeleteButton
-                          action={deleteExamAction}
-                          hiddenFields={{ id: exam.id }}
-                          confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
-                        />
+                        {exam.isFinal ? (
+                          <span />
+                        ) : (
+                          <DeleteButton
+                            action={deleteExamAction}
+                            hiddenFields={{ id: exam.id }}
+                            confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
+                          />
+                        )}
                         <ExamLinkActions
                           examId={exam.id}
                           resultToken={exam.resultToken}
@@ -87,10 +106,15 @@ export default async function ExamsPage() {
                   </TableHeader>
                   <TableBody>
                     {exams.map((exam) => (
-                      <TableRow key={exam.id}>
-                        <TableCell className="font-medium">{exam.name}</TableCell>
-                        <TableCell>{formatDate(exam.examDate)}</TableCell>
-                        <TableCell>{formatDate(exam.resultDate)}</TableCell>
+                      <TableRow key={exam.id} className={exam.isFinal ? "bg-blue-50" : undefined}>
+                        <TableCell className="font-medium">
+                          <span className="flex items-center gap-1.5">
+                            {exam.name}
+                            {exam.isFinal && <Badge variant="info">Default</Badge>}
+                          </span>
+                        </TableCell>
+                        <TableCell>{exam.isFinal ? "-" : formatDate(exam.examDate)}</TableCell>
+                        <TableCell>{exam.isFinal ? "-" : formatDate(exam.resultDate)}</TableCell>
                         <TableCell>
                           <Badge variant={exam.resultLinkActive ? "success" : "outline"}>
                             {exam.resultLinkActive ? "Active" : "Off"}
@@ -105,11 +129,13 @@ export default async function ExamsPage() {
                           />
                         </TableCell>
                         <TableCell className="text-right">
-                          <DeleteButton
-                            action={deleteExamAction}
-                            hiddenFields={{ id: exam.id }}
-                            confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
-                          />
+                          {!exam.isFinal && (
+                            <DeleteButton
+                              action={deleteExamAction}
+                              hiddenFields={{ id: exam.id }}
+                              confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
+                            />
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

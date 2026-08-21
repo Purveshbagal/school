@@ -54,14 +54,11 @@ function threeDigits(n: number): string {
   return `${ONES[Math.floor(n / 100)]} Hundred${n % 100 ? " " + twoDigits(n % 100) : ""}`;
 }
 
-/** Converts a rupee amount to Indian numbering words, e.g. 1178.33 -> "One Thousand One Hundred Seventy Eight Rupees and Thirty Three Paise Only" */
-export function amountToWords(amount: number): string {
-  const rupees = Math.floor(Math.abs(amount));
-  const paise = Math.round((Math.abs(amount) - rupees) * 100);
+/** Converts a non-negative whole number to Indian numbering words, e.g. 349 -> "Three Hundred Forty Nine" */
+export function numberToWords(value: number): string {
+  let n = Math.floor(Math.abs(value));
+  if (n === 0) return "Zero";
 
-  if (rupees === 0 && paise === 0) return "Zero Rupees Only";
-
-  let n = rupees;
   const parts: string[] = [];
 
   const crore = Math.floor(n / 10000000);
@@ -77,7 +74,17 @@ export function amountToWords(amount: number): string {
   if (thousand) parts.push(`${threeDigits(thousand)} Thousand`);
   if (hundred) parts.push(threeDigits(hundred));
 
-  let result = parts.length ? parts.join(" ") + " Rupees" : "Zero Rupees";
+  return parts.join(" ");
+}
+
+/** Converts a rupee amount to Indian numbering words, e.g. 1178.33 -> "One Thousand One Hundred Seventy Eight Rupees and Thirty Three Paise Only" */
+export function amountToWords(amount: number): string {
+  const rupees = Math.floor(Math.abs(amount));
+  const paise = Math.round((Math.abs(amount) - rupees) * 100);
+
+  if (rupees === 0 && paise === 0) return "Zero Rupees Only";
+
+  let result = rupees ? `${numberToWords(rupees)} Rupees` : "Zero Rupees";
   if (paise) {
     result += ` and ${twoDigits(paise)} Paise`;
   }

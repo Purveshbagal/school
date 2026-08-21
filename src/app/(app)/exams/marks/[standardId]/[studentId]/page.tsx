@@ -23,7 +23,7 @@ export default async function StudentMarksEntryPage({
 
   const [subjects, exams] = await Promise.all([
     prisma.subject.findMany({ where: { standardId }, orderBy: { name: "asc" } }),
-    prisma.exam.findMany({ orderBy: { examDate: "desc" } }),
+    prisma.exam.findMany({ where: { NOT: { isFinal: true } }, orderBy: { examDate: "desc" } }),
   ]);
 
   const examId = selectedExamId || exams[0]?.id || "";

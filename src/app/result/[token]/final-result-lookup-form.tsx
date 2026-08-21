@@ -6,31 +6,29 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/document-header";
 import { PrintDownloadActions } from "@/components/print-download-actions";
-import { ResultCard } from "./result-card";
-import { lookupResultAction, type ResultLookupResult } from "@/app/actions/marks";
+import { FinalResultCard } from "./final-result-card";
+import { lookupFinalResultAction, type FinalResultLookupResult } from "@/app/actions/marks";
 
-export function AadharLookupForm({
+export function FinalResultLookupForm({
   token,
   schoolName,
   address,
   udise,
   phone,
-  examName,
 }: {
   token: string;
   schoolName: string;
   address: string | null;
   udise: string | null;
   phone: string | null;
-  examName: string;
 }) {
   const [aadhar, setAadhar] = useState("");
-  const [result, setResult] = useState<ResultLookupResult | null>(null);
+  const [result, setResult] = useState<FinalResultLookupResult | null>(null);
   const [pending, startTransition] = useTransition();
 
   function showResult() {
     startTransition(async () => {
-      const res = await lookupResultAction(token, aadhar);
+      const res = await lookupFinalResultAction(token, aadhar);
       setResult(res);
     });
   }
@@ -39,24 +37,20 @@ export function AadharLookupForm({
     return (
       <div className="mx-auto w-full max-w-2xl space-y-4 print:max-w-none">
         <div className="flex justify-end">
-          <PrintDownloadActions targetId="exam-result-card" fileName={`Result-${result.studentName}`} />
+          <PrintDownloadActions targetId="final-result-card" fileName={`Final-Result-${result.studentName}`} />
         </div>
 
-        <ResultCard
+        <FinalResultCard
           schoolName={schoolName}
           address={address}
           phone={phone}
           studentName={result.studentName}
           motherName={result.motherName}
           standardName={result.standardName}
-          examName={result.examName}
-          resultDate={result.resultDate}
-          rows={result.rows}
+          terms={result.terms}
           totalObtained={result.totalObtained}
           totalMax={result.totalMax}
           percentage={result.percentage}
-          rank={result.rank}
-          totalStudents={result.totalStudents}
         />
 
         <Button
@@ -72,10 +66,10 @@ export function AadharLookupForm({
 
   return (
     <div className="mx-auto w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-      <DocumentHeader docType="Exam Result" schoolName={schoolName} address={address} udise={udise} phone={phone} />
-      {examName && (
-        <p className="mt-3 text-center text-sm font-medium text-muted-foreground">{examName}</p>
-      )}
+      <DocumentHeader docType="Final Result" schoolName={schoolName} address={address} udise={udise} phone={phone} />
+      <p className="mt-3 text-center text-sm font-medium text-muted-foreground">
+        Combined result across all terms
+      </p>
 
       <div className="mt-5 space-y-4">
         <div className="space-y-1.5">

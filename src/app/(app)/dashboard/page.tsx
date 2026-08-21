@@ -109,7 +109,7 @@ export default async function DashboardPage() {
       take: 5,
       include: { student: true },
     }),
-    prisma.exam.findMany({ orderBy: { examDate: "desc" }, take: 5 }),
+    prisma.exam.findMany({ where: { NOT: { isFinal: true } }, orderBy: { examDate: "desc" }, take: 5 }),
   ]);
 
   const totalCollected = feesCollected._sum.amount || 0;

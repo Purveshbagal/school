@@ -32,6 +32,7 @@ jobs:
             COOKIE_SECURE=false
             EOF
             npm ci
+            npx prisma db push
             rm -rf .next/
             npm run build
             pm2 restart school --update-env

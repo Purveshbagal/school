@@ -18,7 +18,7 @@ import { formatCurrency, formatDate, formatDateInput } from "@/lib/utils";
 import { PaymentForm } from "@/components/payment-form";
 import { deleteStudentAction } from "@/app/actions/students";
 import { deletePaymentAction } from "@/app/actions/payments";
-import { Pencil, Receipt, Printer, FileText } from "lucide-react";
+import { Pencil, Receipt, Printer, FileText, Wallet } from "lucide-react";
 
 export default async function StudentDetailPage({
   params,
@@ -44,6 +44,14 @@ export default async function StudentDetailPage({
               render={
                 <Link href={`/admission-form/${id}`} target="_blank">
                   <FileText /> Admission Form
+                </Link>
+              }
+            />
+            <Button
+              variant="outline"
+              render={
+                <Link href={`/fee-structure/${id}`} target="_blank">
+                  <Wallet /> Fee Structure
                 </Link>
               }
             />

@@ -107,6 +107,10 @@ model Student {
   marks         Marks[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+
+  // Public result-lookup page filters by this on every request — without an index,
+  // MongoDB does a full collection scan per lookup, which doesn't scale under load.
+  @@index([aadharNumber])
 }
 
 model FeeStructure {
@@ -632,6 +636,10 @@ model Exam {
   resultDate       DateTime
   resultToken      String?   @unique
   resultLinkActive Boolean   @default(false)
+  /// Marks the single auto-created "Final Result" entry (see ensureFinalResultExam)
+  /// whose public link shows a student's combined result across every real exam/term
+  /// instead of marks entered against it directly — it never holds marks of its own.
+  isFinal          Boolean   @default(false)
   marks            Marks[]
   createdAt        DateTime  @default(now())
 }
@@ -652,6 +660,9 @@ model Marks {
   updatedAt     DateTime @updatedAt
 
   @@unique([studentId, examId, subjectId])
+  // Speeds up the class-rank calculation on the public result page, which filters by
+  // examId across many students at once.
+  @@index([examId])
 }
 
 model Notification {

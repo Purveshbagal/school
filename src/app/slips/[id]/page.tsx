@@ -169,8 +169,7 @@ export default async function SlipPage({
           <p className="mt-2 text-sm text-slate-500">Remarks: {slip.remarks}</p>
         )}
 
-        <div className="mt-14 flex items-end justify-between text-sm">
-          <p className="text-slate-400">This is a computer generated salary slip.</p>
+        <div className="mt-14 flex items-end justify-end text-sm">
           <div className="text-center">
             <div className="mb-1 h-10 w-40 border-b border-slate-400" />
             <p className="text-slate-500">Authorized Signatory</p>

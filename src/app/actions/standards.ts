@@ -32,11 +32,25 @@ export async function updateStandardPromotionAction(formData: FormData): Promise
   revalidatePath(`/standards/${id}`);
 }
 
-export async function deleteStandardAction(formData: FormData): Promise<void> {
+export async function deleteStandardAction(formData: FormData): Promise<{ error?: string } | void> {
   const id = String(formData.get("id"));
   const studentCount = await prisma.student.count({ where: { standardId: id } });
-  if (studentCount > 0) return;
-  await prisma.standard.delete({ where: { id } });
+  if (studentCount > 0) return { error: "Cannot delete a standard that has students." };
+
+  const subjects = await prisma.subject.findMany({ where: { standardId: id }, select: { id: true } });
+  const marksCount = subjects.length
+    ? await prisma.marks.count({ where: { subjectId: { in: subjects.map((s) => s.id) } } })
+    : 0;
+  if (marksCount > 0) return { error: "Cannot delete a standard that has recorded marks." };
+
+  await prisma.$transaction([
+    prisma.standard.updateMany({ where: { promotesToId: id }, data: { promotesToId: null } }),
+    prisma.feeComponent.deleteMany({ where: { feeStructure: { standardId: id } } }),
+    prisma.feeStructure.deleteMany({ where: { standardId: id } }),
+    prisma.subject.deleteMany({ where: { standardId: id } }),
+    prisma.standard.delete({ where: { id } }),
+  ]);
+
   revalidatePath("/standards");
 }
 

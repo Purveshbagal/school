@@ -12,7 +12,7 @@ async function main() {
     update: {},
     create: {
       id: "main",
-      name: "Little Star English School ,Devtkali",
+      name: "Little Star English School, Devtkali",
       address: "Devtakali, Tal. Shevgaon, Dist. Ahilyanagar",
       udise: "27261102906",
       phone: "9876543210",

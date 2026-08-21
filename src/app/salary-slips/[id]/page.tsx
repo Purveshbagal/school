@@ -1,17 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { formatCurrency, formatDate, amountToWords } from "@/lib/utils";
+import { getOutstandingAdvanceTotal } from "@/lib/payroll-data";
+import { formatNumber, amountToWords } from "@/lib/utils";
 import { MONTH_NAMES } from "@/lib/payroll-engine";
 import { PrintDownloadActions } from "@/components/print-download-actions";
-import { DocumentHeader } from "@/components/document-header";
-import { Badge } from "@/components/ui/badge";
-
-const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "outline"> = {
-  PAID: "success",
-  PARTIALLY_PAID: "warning",
-  GENERATED: "destructive",
-};
 
 export default async function SalarySlipPage({
   params,
@@ -25,207 +18,208 @@ export default async function SalarySlipPage({
 
   const payroll = await prisma.payroll.findUnique({
     where: { id },
-    include: { teacher: true, bonuses: true, deductions: true, payments: { orderBy: { paymentDate: "asc" } } },
+    include: { teacher: true, bonuses: true, deductions: true },
   });
   if (!payroll || payroll.deletedAt) notFound();
 
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "main" } });
 
-  const attendanceRows: [string, string | number][] = [
-    ["Working Days", payroll.workingDays],
-    ["Present Days", payroll.presentDays],
-    ["Absent Days", payroll.absentDays],
-    ["Half Days", payroll.halfDays],
-    ["Paid Leave", payroll.paidLeaveDays],
-    ["Unpaid Leave", payroll.unpaidLeaveDays],
-    ["Late Count", payroll.lateCount],
+  const monthStart = new Date(payroll.year, payroll.month - 1, 1);
+  const monthEnd = new Date(payroll.year, payroll.month, 0, 23, 59, 59, 999);
+  const monthName = MONTH_NAMES[payroll.month - 1];
+  const workingRange = `1 ${monthName} to ${monthEnd.getDate()} ${monthName}`;
+
+  const [advanceGivenThisMonth, advanceRemaining] = await Promise.all([
+    prisma.advancePayment
+      .findMany({ where: { teacherId: payroll.teacherId, deletedAt: null, date: { gte: monthStart, lte: monthEnd } } })
+      .then((rows) => rows.reduce((sum, a) => sum + a.amount, 0)),
+    getOutstandingAdvanceTotal(payroll.teacherId),
+  ]);
+
+  // Absence and Leave share one combined deduction bucket, computed at an identical per-day
+  // rate — split it back out proportionally by day count so each row's amount is exact.
+  const totalUnpaidDays = payroll.absentDays + payroll.unpaidLeaveDays;
+  const perUnpaidDayDeduction = totalUnpaidDays > 0 ? payroll.leaveDeduction / totalUnpaidDays : 0;
+  const absenceDeduction = perUnpaidDayDeduction * payroll.absentDays;
+  const leaveDeductionAmount = perUnpaidDayDeduction * payroll.unpaidLeaveDays;
+
+  const attendanceRows: { label: string; day: number; amount: number }[] = [
+    { label: "Total Days", day: payroll.workingDays, amount: payroll.grossSalary },
+    { label: "Absence", day: payroll.absentDays, amount: absenceDeduction },
+    { label: "Half Day", day: payroll.halfDays, amount: payroll.halfDayDeduction },
+    { label: "Late Punch", day: payroll.lateCount, amount: payroll.lateDeduction },
+    { label: "Early Logout", day: 0, amount: 0 },
+    { label: "Leave", day: payroll.unpaidLeaveDays, amount: leaveDeductionAmount },
   ];
 
-  const earningRows: [string, number][] = [
-    ["Gross Salary", payroll.grossSalary] as [string, number],
-    ...payroll.bonuses.map((b) => [`Bonus — ${b.type}${b.note ? ` (${b.note})` : ""}`, b.amount] as [string, number]),
+  const deductionLineRows = [
+    ...payroll.deductions.map((d) => ({ label: d.note ? `${d.type} — ${d.note}` : d.type, amount: d.amount })),
+    ...(payroll.statutoryDeductionsTotal > 0 ? [{ label: "Statutory (PF/ESIC/PT)", amount: payroll.statutoryDeductionsTotal }] : []),
   ];
 
-  const deductionRows: [string, number][] = (
-    [
-      ["Leave Deduction", payroll.leaveDeduction],
-      ["Half Day Deduction", payroll.halfDayDeduction],
-      ["Late Deduction", payroll.lateDeduction],
-      ...(payroll.statutoryDeductionsTotal > 0 ? [["Statutory (PF/ESIC/PT)", payroll.statutoryDeductionsTotal]] : []),
-      ...payroll.deductions.map((d) => [`${d.type}${d.note ? ` (${d.note})` : ""}`, d.amount]),
-      ["Advance Applied", payroll.advanceApplied],
-    ] as [string, number][]
-  ).filter(([, amt]) => amt > 0);
+  const bonusSum = payroll.bonuses.reduce((sum, b) => sum + b.amount, 0);
 
-  const totalEarnings = earningRows.reduce((s, [, a]) => s + a, 0) + payroll.previousPending;
-  const totalDeductions = deductionRows.reduce((s, [, a]) => s + a, 0);
+  const netPaymentPreAdvance =
+    payroll.grossSalary - payroll.leaveDeduction - payroll.halfDayDeduction - payroll.lateDeduction - payroll.otherDeductionsTotal + bonusSum;
+  const subTotal = netPaymentPreAdvance + payroll.previousPending;
+  const total = subTotal - payroll.advanceApplied;
+  const balance = total - payroll.paidAmount;
+
+  const srNoStart = attendanceRows.length + 1;
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
-      <div className="mx-auto mb-4 max-w-2xl px-4 print:hidden">
+      <div className="mx-auto mb-4 max-w-3xl px-4 print:hidden">
         <PrintDownloadActions targetId="print-content" fileName={`Salary-Slip-${payroll.invoiceNo}`} />
       </div>
 
       <div
         id="print-content"
-        className="mx-auto max-w-2xl bg-white p-8 shadow-lg ring-1 ring-slate-200 print:p-12 print:shadow-none print:ring-0"
+        className="mx-auto max-w-3xl bg-white p-4 shadow-lg ring-1 ring-slate-200 print:p-6 print:shadow-none print:ring-0"
       >
-        <DocumentHeader
-          docType="Salary Slip"
-          schoolName={settings?.name || "School Name"}
-          address={settings?.address}
-          udise={settings?.udise}
-          phone={settings?.phone}
-        />
-
-        <div className="my-5 border-t border-dashed border-slate-300" />
-
-        <div className="grid grid-cols-2 gap-y-2 text-sm">
-          <div>
-            <span className="text-slate-500">Invoice No: </span>
-            <span className="font-semibold">{payroll.invoiceNo}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-slate-500">Generated: </span>
-            <span className="font-semibold">{formatDate(payroll.createdAt)}</span>
-          </div>
-          <div>
-            <span className="text-slate-500">Employee: </span>
-            <span className="font-semibold">{payroll.teacher.name}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-slate-500">Employee No: </span>
-            <span className="font-semibold">{payroll.teacher.employeeNo}</span>
-          </div>
-          <div>
-            <span className="text-slate-500">Designation: </span>
-            <span className="font-semibold">{payroll.teacher.designation || "-"}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-slate-500">Month: </span>
-            <span className="font-semibold">{MONTH_NAMES[payroll.month - 1]} {payroll.year}</span>
-          </div>
-        </div>
-
-        <div className="my-4 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-          <span className="text-sm text-slate-500">Status</span>
-          <Badge variant={STATUS_VARIANT[payroll.status] || "outline"}>{payroll.status.replace("_", " ")}</Badge>
-        </div>
-
-        <table className="w-full border-collapse overflow-hidden rounded-lg text-sm">
-          <thead>
-            <tr className="bg-blue-600 text-white">
-              <th className="px-3 py-2 text-left font-medium" colSpan={2}>Attendance</th>
-            </tr>
-          </thead>
+        <table className="w-full border-collapse border border-slate-900 text-sm">
+          <colgroup>
+            <col className="w-[12%]" />
+            <col className="w-[43%]" />
+            <col className="w-[15%]" />
+            <col className="w-[30%]" />
+          </colgroup>
           <tbody>
-            {attendanceRows.map(([label, val]) => (
-              <tr key={label} className="border-b border-slate-200">
-                <td className="px-3 py-1.5 text-slate-600">{label}</td>
-                <td className="px-3 py-1.5 text-right text-slate-600">{val}</td>
+            <tr>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Teacher Name :-</td>
+              <td className="border border-slate-900 p-2 text-center font-bold tracking-wide text-purple-800 uppercase" colSpan={3}>
+                {payroll.teacher.name}
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Designation :-</td>
+              <td className="border border-slate-900 p-2">{payroll.teacher.designation || "Teacher"}</td>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Invoice No :-</td>
+              <td className="border border-slate-900 p-2">{payroll.invoiceNo}</td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Month : -</td>
+              <td className="border border-slate-900 p-2">{monthName}</td>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Date :-</td>
+              <td className="border border-slate-900 p-2">
+                {new Date(payroll.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Salary :</td>
+              <td className="border border-slate-900 p-2">{formatNumber(payroll.grossSalary)}</td>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Working</td>
+              <td className="border border-slate-900 p-2">{workingRange}</td>
+            </tr>
+
+            <tr className="bg-sky-100">
+              <td className="border border-slate-900 p-2 text-center font-semibold">Sr No</td>
+              <td className="border border-slate-900 p-2 text-center font-semibold">Details</td>
+              <td className="border border-slate-900 p-2 text-center font-semibold">Day</td>
+              <td className="border border-slate-900 p-2 text-center font-semibold">Pement</td>
+            </tr>
+
+            {attendanceRows.map((row, i) => (
+              <tr key={row.label}>
+                <td className="border border-slate-900 p-1.5 text-center">{i + 1}</td>
+                <td className="border border-slate-900 p-1.5">{row.label}</td>
+                <td className="border border-slate-900 p-1.5 text-center">{formatNumber(row.day)}</td>
+                <td className="border border-slate-900 p-1.5 text-right">{formatNumber(row.amount)}</td>
               </tr>
             ))}
-          </tbody>
-        </table>
 
-        <table className="mt-4 w-full border-collapse overflow-hidden rounded-lg text-sm">
-          <thead>
-            <tr className="bg-emerald-600 text-white">
-              <th className="px-3 py-2 text-left font-medium">Earnings</th>
-              <th className="px-3 py-2 text-right font-medium">Amount</th>
+            <tr>
+              <td className="border border-slate-900 p-1.5 text-center">{srNoStart}</td>
+              <td className="border border-slate-900 p-0" colSpan={3}>
+                {deductionLineRows.length === 0 ? (
+                  <div className="p-1.5 text-slate-400">No deductions</div>
+                ) : (
+                  <table className="w-full border-collapse">
+                    <colgroup>
+                      <col className="w-[55%]" />
+                      <col className="w-[45%]" />
+                    </colgroup>
+                    <tbody>
+                      {deductionLineRows.map((row, i) => (
+                        <tr key={`${row.label}-${i}`} className="bg-red-600 text-white">
+                          <td className={`p-1.5 font-medium ${i > 0 ? "border-t border-red-400" : ""}`}>{row.label}</td>
+                          <td className={`p-1.5 text-right font-medium ${i > 0 ? "border-t border-red-400" : ""}`}>
+                            {formatNumber(row.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {earningRows.map(([label, amt]) => (
-              <tr key={label} className="border-b border-slate-200">
-                <td className="px-3 py-1.5 text-slate-600">{label}</td>
-                <td className="px-3 py-1.5 text-right text-slate-600">{formatCurrency(amt)}</td>
+
+            {payroll.bonuses.map((b, i) => (
+              <tr key={b.id} className="bg-emerald-500 text-white">
+                <td className="border border-slate-900 p-1.5 text-center">{srNoStart + 1 + i}</td>
+                <td className="border border-slate-900 p-1.5 font-medium" colSpan={2}>
+                  Bonus — {b.type}{b.note ? ` (${b.note})` : ""}
+                </td>
+                <td className="border border-slate-900 p-1.5 text-right font-medium">{formatNumber(b.amount)}</td>
               </tr>
             ))}
-            {payroll.previousPending > 0 && (
-              <tr className="border-b border-slate-200">
-                <td className="px-3 py-1.5 text-slate-600">Previous Month Pending</td>
-                <td className="px-3 py-1.5 text-right text-slate-600">{formatCurrency(payroll.previousPending)}</td>
-              </tr>
-            )}
-            <tr className="bg-emerald-50 font-semibold">
-              <td className="px-3 py-2">Total Earnings</td>
-              <td className="px-3 py-2 text-right">{formatCurrency(totalEarnings)}</td>
+
+            <tr className="font-semibold">
+              <td className="border border-slate-900 p-2" colSpan={3}>
+                Net Pement
+              </td>
+              <td className="border border-slate-900 p-2 text-right">{formatNumber(netPaymentPreAdvance)}</td>
+            </tr>
+
+            <tr>
+              <td className="border border-slate-900 bg-green-200 p-2 font-semibold" colSpan={2}>
+                Advance Pement Rs. {formatNumber(advanceGivenThisMonth)}
+              </td>
+              <td className="border border-slate-900 p-2 font-semibold whitespace-nowrap">Last Month Pending</td>
+              <td className="border border-slate-900 p-2 text-right">{formatNumber(payroll.previousPending)}</td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 bg-green-200 p-2 font-semibold" colSpan={2}>
+                Advance Remening Rs. {formatNumber(advanceRemaining)}
+              </td>
+              <td className="border border-slate-900 bg-amber-100 p-2 font-semibold">Sub Total</td>
+              <td className="border border-slate-900 bg-amber-100 p-2 text-right font-semibold">{formatNumber(subTotal)}</td>
+            </tr>
+
+            <tr>
+              <td className="border border-slate-900 p-2 align-top font-semibold" rowSpan={4}>
+                Invoice Amount In Word
+              </td>
+              <td className="border border-slate-900 p-2 align-top text-xs italic" rowSpan={4}>
+                {amountToWords(total)}
+              </td>
+              <td className="border border-slate-900 p-2 font-semibold">Advance Deduction</td>
+              <td className="border border-slate-900 p-2 text-right">{formatNumber(payroll.advanceApplied)}</td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 p-2 font-semibold">Total</td>
+              <td className="border border-slate-900 p-2 text-right font-semibold">{formatNumber(total)}</td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 p-2 font-semibold">Paid</td>
+              <td className="border border-slate-900 p-2 text-right">{formatNumber(payroll.paidAmount)}</td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 bg-blue-200 p-3 text-base font-bold">Balance</td>
+              <td className="border border-slate-900 bg-blue-200 p-3 text-right text-lg font-bold">{formatNumber(balance)}</td>
+            </tr>
+
+            <tr>
+              <td className="border border-slate-900 p-4 text-center" colSpan={4}>
+                For :- {settings?.name || "School Name"}
+                {settings?.address ? `, ${settings.address}` : ""}.
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-slate-900 p-10" colSpan={4} />
             </tr>
           </tbody>
         </table>
-
-        <table className="mt-4 w-full border-collapse overflow-hidden rounded-lg text-sm">
-          <thead>
-            <tr className="bg-rose-600 text-white">
-              <th className="px-3 py-2 text-left font-medium">Deductions</th>
-              <th className="px-3 py-2 text-right font-medium">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deductionRows.length === 0 ? (
-              <tr>
-                <td className="px-3 py-1.5 text-slate-500" colSpan={2}>No deductions</td>
-              </tr>
-            ) : (
-              deductionRows.map(([label, amt]) => (
-                <tr key={label} className="border-b border-slate-200">
-                  <td className="px-3 py-1.5 text-slate-600">{label}</td>
-                  <td className="px-3 py-1.5 text-right text-slate-600">{formatCurrency(amt)}</td>
-                </tr>
-              ))
-            )}
-            <tr className="bg-rose-50 font-semibold">
-              <td className="px-3 py-2">Total Deductions</td>
-              <td className="px-3 py-2 text-right">{formatCurrency(totalDeductions)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table className="mt-4 w-full border-collapse overflow-hidden rounded-lg text-sm">
-          <tbody>
-            <tr className="border-b border-slate-200 bg-blue-50 font-semibold">
-              <td className="px-3 py-2.5">Net Payable</td>
-              <td className="px-3 py-2.5 text-right">{formatCurrency(payroll.netPayable)}</td>
-            </tr>
-            <tr className="border-b border-slate-200">
-              <td className="px-3 py-2">Paid Amount</td>
-              <td className="px-3 py-2 text-right">{formatCurrency(payroll.paidAmount)}</td>
-            </tr>
-            <tr className="bg-slate-100 font-semibold">
-              <td className="px-3 py-2.5">Pending Amount</td>
-              <td className="px-3 py-2.5 text-right">{formatCurrency(payroll.pendingAmount)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <p className="mt-4 text-sm">
-          <span className="text-slate-500">Amount in words: </span>
-          <span className="font-medium italic">{amountToWords(payroll.netPayable)}</span>
-        </p>
-
-        {payroll.payments.length > 0 && (
-          <div className="mt-4 text-sm">
-            <p className="mb-1 text-slate-500">Payment History:</p>
-            <ul className="list-inside list-disc space-y-0.5 text-slate-600">
-              {payroll.payments.map((p) => (
-                <li key={p.id}>
-                  {formatCurrency(p.amount)} via {p.paymentMode} on {formatDate(p.paymentDate)}
-                  {p.referenceNo ? ` (Ref: ${p.referenceNo})` : ""}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {payroll.remarks && <p className="mt-2 text-sm text-slate-500">Remarks: {payroll.remarks}</p>}
-
-        <div className="mt-14 flex items-end justify-end text-sm">
-          <div className="text-center">
-            <div className="mb-1 h-10 w-40 border-b border-slate-400" />
-            <p className="text-slate-500">Authorized Signatory</p>
-          </div>
-        </div>
       </div>
     </div>
   );

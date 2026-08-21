@@ -90,6 +90,10 @@ export default async function TeacherDetailPage({
   const totalSalaryPending = filteredPayrolls.reduce((sum, p) => sum + p.pendingAmount, 0);
   const netToGive = totalSalaryPending - outstandingAdvance;
 
+  const combinedHistory = [...filteredSalaryEntries, ...filteredAdvanceEntries].sort(
+    (a, b) => b.date.getTime() - a.date.getTime()
+  );
+
   return (
     <div>
       <PageHeader
@@ -165,30 +169,52 @@ export default async function TeacherDetailPage({
               <TeacherHistoryFilter />
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Paid (Advance)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4 grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Given · {historyRangeLabel}</p>
-                      <p className="mt-1 text-lg font-semibold text-info">{formatCurrency(totalAdvanceGiven)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Outstanding (not adjusted)</p>
-                      <p className="mt-1 text-lg font-semibold text-warning">{formatCurrency(outstandingAdvance)}</p>
-                    </div>
+            <Card>
+              <CardContent>
+                <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Advance Given · {historyRangeLabel}</p>
+                    <p className="mt-1 text-lg font-semibold text-info">{formatCurrency(totalAdvanceGiven)}</p>
                   </div>
-
-                  {filteredAdvanceEntries.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      {isFiltered ? `No advances given for ${historyRangeLabel}.` : "No advances given yet."}
+                  <div>
+                    <p className="text-xs text-muted-foreground">Advance Outstanding</p>
+                    <p className="mt-1 text-lg font-semibold text-warning">{formatCurrency(outstandingAdvance)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Paid · {historyRangeLabel}</p>
+                    <p className="mt-1 text-lg font-semibold text-success">{formatCurrency(totalSalaryPaid)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">To Give</p>
+                    <p className={`mt-1 text-lg font-semibold ${netToGive < 0 ? "text-destructive" : "text-warning"}`}>
+                      {netToGive < 0 ? "-" : ""}{formatCurrency(Math.abs(netToGive))}
                     </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredAdvanceEntries.map((entry) => (
+                  </div>
+                </div>
+
+                {combinedHistory.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    {isFiltered ? `No salary or advance activity for ${historyRangeLabel}.` : "No salary or advance activity yet."}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {combinedHistory.map((entry) =>
+                      entry.kind === "salary" ? (
+                        <Link
+                          key={`salary-${entry.id}`}
+                          href={`/payroll/${id}?month=${entry.month}&year=${entry.year}`}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-accent/50"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="info">Salary</Badge>
+                              <span className="text-xs text-muted-foreground">{MONTH_NAMES[entry.month - 1]} {entry.year}</span>
+                            </div>
+                            <p className="mt-1 font-medium">{formatCurrency(entry.amount)}</p>
+                          </div>
+                          <Badge variant={SALARY_STATUS_VARIANT[entry.status] || "outline"}>{entry.status.replace("_", " ")}</Badge>
+                        </Link>
+                      ) : (
                         <Link
                           key={`advance-${entry.id}`}
                           href={`/advance-payments/${id}`}
@@ -204,57 +230,12 @@ export default async function TeacherDetailPage({
                           </div>
                           <Badge variant={ADVANCE_STATUS_VARIANT[entry.status] || "outline"}>{entry.status.replace("_", " ")}</Badge>
                         </Link>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Generated</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4 grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Paid · {historyRangeLabel}</p>
-                      <p className="mt-1 text-lg font-semibold text-success">{formatCurrency(totalSalaryPaid)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">To Give</p>
-                      <p className={`mt-1 text-lg font-semibold ${netToGive < 0 ? "text-destructive" : "text-warning"}`}>
-                        {netToGive < 0 ? "-" : ""}{formatCurrency(Math.abs(netToGive))}
-                      </p>
-                    </div>
+                      )
+                    )}
                   </div>
-
-                  {filteredSalaryEntries.length === 0 ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      {isFiltered ? `No salary generated for ${historyRangeLabel}.` : "No salary generated yet."}
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredSalaryEntries.map((entry) => (
-                        <Link
-                          key={`salary-${entry.id}`}
-                          href={`/payroll/${id}?month=${entry.month}&year=${entry.year}`}
-                          className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-accent/50"
-                        >
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="info">Salary</Badge>
-                              <span className="text-xs text-muted-foreground">{MONTH_NAMES[entry.month - 1]} {entry.year}</span>
-                            </div>
-                            <p className="mt-1 font-medium">{formatCurrency(entry.amount)}</p>
-                          </div>
-                          <Badge variant={SALARY_STATUS_VARIANT[entry.status] || "outline"}>{entry.status.replace("_", " ")}</Badge>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
 

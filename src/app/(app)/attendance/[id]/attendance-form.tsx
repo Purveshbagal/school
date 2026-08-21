@@ -1,14 +1,22 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { saveAttendanceSummaryAction } from "@/app/actions/payroll/attendance-summary";
 import { calcPresentDays, calcAbsentDays } from "@/lib/payroll-engine";
-import { Lock } from "lucide-react";
+import { CheckCircle2, Lock } from "lucide-react";
 
 export function AttendanceForm({
   teacherId,
@@ -33,7 +41,19 @@ export function AttendanceForm({
   defaultUnpaidLeaveDays: number;
   defaultLateCount: number;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(saveAttendanceSummaryAction, undefined);
+  const [showDone, setShowDone] = useState(false);
+
+  useEffect(() => {
+    if (state?.success) {
+      setShowDone(true);
+      const timer = setTimeout(() => {
+        router.back();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [state, router]);
 
   const [workingDays, setWorkingDays] = useState(defaultWorkingDays);
   const [absentDays, setAbsentDaysState] = useState(defaultAbsentDays);
@@ -86,6 +106,21 @@ export function AttendanceForm({
 
   return (
     <Card>
+      <Dialog open={showDone} onOpenChange={setShowDone}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" /> Done
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Attendance saved successfully.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => router.back()}>
+              Back
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CardContent>
         {locked && (
           <Alert className="mb-4">

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeLedgerEntry } from "@/lib/ledger";
@@ -13,9 +12,9 @@ import { getSalarySettings } from "@/lib/salary-settings";
 import { formatCurrency } from "@/lib/utils";
 
 export async function generatePayrollAction(
-  _prevState: { error?: string } | undefined,
+  _prevState: { error?: string; success?: boolean } | undefined,
   formData: FormData
-): Promise<{ error?: string } | never> {
+): Promise<{ error?: string; success?: boolean }> {
   const teacherId = String(formData.get("teacherId") || "");
   const month = Number(formData.get("month") || 0);
   const year = Number(formData.get("year") || 0);
@@ -185,7 +184,7 @@ export async function generatePayrollAction(
   revalidatePath(`/payroll/${teacherId}`);
   revalidatePath("/salary-slips");
   revalidatePath("/advance-payments");
-  redirect(`/salary-slips/${payroll.id}`);
+  return { success: true };
 }
 
 export async function lockPayrollAction(

@@ -1,15 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeLedgerEntry } from "@/lib/ledger";
 
 export async function saveAttendanceSummaryAction(
-  _prevState: { error?: string } | undefined,
+  _prevState: { error?: string; success?: boolean } | undefined,
   formData: FormData
-): Promise<{ error?: string } | never> {
+): Promise<{ error?: string; success?: boolean }> {
   const teacherId = String(formData.get("teacherId") || "");
   const month = Number(formData.get("month") || 0);
   const year = Number(formData.get("year") || 0);
@@ -68,5 +67,5 @@ export async function saveAttendanceSummaryAction(
   revalidatePath("/attendance");
   revalidatePath(`/attendance/${teacherId}`);
   revalidatePath(`/payroll/${teacherId}`);
-  redirect(`/attendance/${teacherId}?month=${month}&year=${year}`);
+  return { success: true };
 }

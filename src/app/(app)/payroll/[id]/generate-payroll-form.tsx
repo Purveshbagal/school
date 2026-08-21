@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { generatePayrollAction } from "@/app/actions/payroll/payroll";
 import { formatCurrency } from "@/lib/utils";
-import { AlertCircle, CircleDollarSign } from "lucide-react";
+import { AlertCircle, CheckCircle2, CircleDollarSign } from "lucide-react";
 
 export function GeneratePayrollForm({
   teacherId,
@@ -28,11 +36,37 @@ export function GeneratePayrollForm({
   outstandingAdvance: number;
   previousPending: number;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(generatePayrollAction, undefined);
+  const [showDone, setShowDone] = useState(false);
   const canGenerate = hasStructure && hasAttendance;
+
+  useEffect(() => {
+    if (state?.success) {
+      setShowDone(true);
+    }
+  }, [state]);
+
+  function handleDoneClose(open: boolean) {
+    setShowDone(open);
+    if (!open) router.refresh();
+  }
 
   return (
     <Card>
+      <Dialog open={showDone} onOpenChange={handleDoneClose}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" /> Done
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Payroll generated successfully.</p>
+          <DialogFooter>
+            <Button onClick={() => handleDoneClose(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CardHeader>
         <CardTitle>Salary not yet generated for this period</CardTitle>
       </CardHeader>

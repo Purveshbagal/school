@@ -23,6 +23,15 @@ export const RANGE_OPTIONS = [
 
 export type PaymentRange = (typeof RANGE_OPTIONS)[number]["value"];
 
+/** Simplified range set for the teacher salary+advance combined history widget. */
+export const TEACHER_HISTORY_RANGE_OPTIONS = [
+  { value: "all", label: "All Time" },
+  { value: "month", label: "This Month" },
+  { value: "last-3-months", label: "Last 3 Months" },
+  { value: "last-6-months", label: "Last 6 Months" },
+  { value: "year", label: "This Year" },
+] as const;
+
 export function resolveDateRange(
   range: string | undefined,
   from?: string,
@@ -47,6 +56,10 @@ export function resolveDateRange(
     }
     case "30days":
       return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) };
+    case "last-3-months":
+      return { start: startOfMonth(subMonths(now, 2)), end: endOfDay(now) };
+    case "last-6-months":
+      return { start: startOfMonth(subMonths(now, 5)), end: endOfDay(now) };
     case "year":
       return { start: startOfYear(now), end: endOfDay(now) };
     case "custom":

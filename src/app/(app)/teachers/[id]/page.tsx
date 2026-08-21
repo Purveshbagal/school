@@ -2,29 +2,80 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getActiveSalaryStructure, getOutstandingAdvanceTotal, getLastPayroll } from "@/lib/payroll-data";
+import { resolveDateRange, TEACHER_HISTORY_RANGE_OPTIONS } from "@/lib/date-ranges";
+import { MONTH_NAMES } from "@/lib/payroll-engine";
+import { TeacherHistoryFilter } from "./teacher-history-filter";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { deleteTeacherAction } from "@/app/actions/teachers";
 import { Pencil, TrendingUp, CircleDollarSign, HandCoins, History } from "lucide-react";
 
+const SALARY_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "outline"> = {
+  PAID: "success",
+  PARTIALLY_PAID: "warning",
+  GENERATED: "destructive",
+  DRAFT: "outline",
+};
+
+const ADVANCE_STATUS_VARIANT: Record<string, "success" | "warning" | "outline"> = {
+  ADJUSTED: "success",
+  PARTIALLY_ADJUSTED: "warning",
+  UNADJUSTED: "outline",
+};
+
+type HistoryEntry =
+  | { kind: "salary"; id: string; date: Date; amount: number; status: string; month: number; year: number }
+  | { kind: "advance"; id: string; date: Date; amount: number; status: string; note: string | null };
+
 export default async function TeacherDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ historyRange?: string }>;
 }) {
   const { id } = await params;
+  const { historyRange } = await searchParams;
   const teacher = await prisma.teacher.findUnique({ where: { id } });
   if (!teacher) notFound();
 
-  const [structure, outstandingAdvance, lastPayroll] = await Promise.all([
+  const [structure, outstandingAdvance, lastPayroll, payrolls, advances] = await Promise.all([
     getActiveSalaryStructure(id),
     getOutstandingAdvanceTotal(id),
     getLastPayroll(id),
+    prisma.payroll.findMany({ where: { teacherId: id, deletedAt: null } }),
+    prisma.advancePayment.findMany({ where: { teacherId: id, deletedAt: null } }),
   ]);
   const pendingFromLastPayroll = lastPayroll ? Math.max(0, lastPayroll.pendingAmount) : 0;
+
+  const historyEntries: HistoryEntry[] = [
+    ...payrolls.map((p) => ({
+      kind: "salary" as const,
+      id: p.id,
+      date: new Date(p.year, p.month - 1, 1),
+      amount: p.netPayable,
+      status: p.status,
+      month: p.month,
+      year: p.year,
+    })),
+    ...advances.map((a) => ({
+      kind: "advance" as const,
+      id: a.id,
+      date: a.date,
+      amount: a.amount,
+      status: a.status,
+      note: a.note,
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  const { start, end } = resolveDateRange(historyRange, undefined, undefined);
+  const isFiltered = Boolean(start && end);
+  const historyRangeLabel = TEACHER_HISTORY_RANGE_OPTIONS.find((o) => o.value === (historyRange || "all"))?.label || "All Time";
+  const filteredHistory = isFiltered ? historyEntries.filter((e) => e.date >= start! && e.date <= end!) : historyEntries;
 
   return (
     <div>
@@ -92,6 +143,57 @@ export default async function TeacherDetailPage({
                   <dd className="font-medium">{teacher.address || "-"}</dd>
                 </div>
               </dl>
+            </CardContent>
+          </Card>
+
+          <Card id="history">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle>Salary & Advance History</CardTitle>
+              <TeacherHistoryFilter />
+            </CardHeader>
+            <CardContent>
+              {filteredHistory.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  {isFiltered ? `No salary or advance activity for ${historyRangeLabel}.` : "No salary or advance activity yet."}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredHistory.map((entry) =>
+                    entry.kind === "salary" ? (
+                      <Link
+                        key={`salary-${entry.id}`}
+                        href={`/payroll/${id}?month=${entry.month}&year=${entry.year}`}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-accent/50"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="info">Salary</Badge>
+                            <span className="text-xs text-muted-foreground">{MONTH_NAMES[entry.month - 1]} {entry.year}</span>
+                          </div>
+                          <p className="mt-1 font-medium">{formatCurrency(entry.amount)}</p>
+                        </div>
+                        <Badge variant={SALARY_STATUS_VARIANT[entry.status] || "outline"}>{entry.status.replace("_", " ")}</Badge>
+                      </Link>
+                    ) : (
+                      <Link
+                        key={`advance-${entry.id}`}
+                        href={`/advance-payments/${id}`}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-accent/50"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="warning">Advance</Badge>
+                            <span className="text-xs text-muted-foreground">{formatDate(entry.date)}</span>
+                          </div>
+                          <p className="mt-1 font-medium">{formatCurrency(entry.amount)}</p>
+                          {entry.note && <p className="truncate text-xs text-muted-foreground">{entry.note}</p>}
+                        </div>
+                        <Badge variant={ADVANCE_STATUS_VARIANT[entry.status] || "outline"}>{entry.status.replace("_", " ")}</Badge>
+                      </Link>
+                    )
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -181,7 +181,6 @@ export async function generatePayrollAction(
   });
 
   revalidatePath("/payroll");
-  revalidatePath(`/payroll/${teacherId}`);
   revalidatePath("/salary-slips");
   revalidatePath("/advance-payments");
   return { success: true };

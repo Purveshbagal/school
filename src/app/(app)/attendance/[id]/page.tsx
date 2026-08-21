@@ -32,7 +32,7 @@ export default async function AttendanceEntryPage({
         description={`${month}/${year} — payroll generation reads these totals automatically`}
       />
       <AttendanceForm
-        key={`${id}-${month}-${year}-${existing?.updatedAt.toISOString() ?? "new"}`}
+        key={`${id}-${month}-${year}`}
         teacherId={id}
         month={month}
         year={year}

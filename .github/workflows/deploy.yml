@@ -30,6 +30,8 @@ jobs:
             NODE_ENV=production
             PORT=9696
             COOKIE_SECURE=false
+            ADMIN_USERNAME=LittleStarSchool
+            ADMIN_PASSWORD=Satwik@123
             EOF
             npm ci
             npx prisma db push

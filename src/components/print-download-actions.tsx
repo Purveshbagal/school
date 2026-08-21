@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, Download, Image as ImageIcon, Loader2 } from "lucide-react";
 
 export function PrintDownloadActions({
   targetId,
@@ -15,6 +16,7 @@ export function PrintDownloadActions({
   pdfFormat?: "a4" | "a5";
   pdfOrientation?: "portrait" | "landscape";
 }) {
+  const router = useRouter();
   const [downloading, setDownloading] = useState(false);
   const [downloadingJpg, setDownloadingJpg] = useState(false);
 
@@ -78,18 +80,23 @@ export function PrintDownloadActions({
   }
 
   return (
-    <div className="flex flex-wrap justify-end gap-2 print:hidden">
-      <Button variant="outline" onClick={handleDownloadJpg} disabled={downloadingJpg}>
-        {downloadingJpg ? <Loader2 className="animate-spin" /> : <ImageIcon />}
-        {downloadingJpg ? "Preparing..." : "Download JPG"}
+    <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+      <Button variant="outline" onClick={() => router.back()}>
+        <ArrowLeft /> Back
       </Button>
-      <Button variant="outline" onClick={handleDownload} disabled={downloading}>
-        {downloading ? <Loader2 className="animate-spin" /> : <Download />}
-        {downloading ? "Preparing..." : "Download PDF"}
-      </Button>
-      <Button onClick={() => window.print()}>
-        <Printer /> Print
-      </Button>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="outline" onClick={handleDownloadJpg} disabled={downloadingJpg}>
+          {downloadingJpg ? <Loader2 className="animate-spin" /> : <ImageIcon />}
+          {downloadingJpg ? "Preparing..." : "Download JPG"}
+        </Button>
+        <Button variant="outline" onClick={handleDownload} disabled={downloading}>
+          {downloading ? <Loader2 className="animate-spin" /> : <Download />}
+          {downloading ? "Preparing..." : "Download PDF"}
+        </Button>
+        <Button onClick={() => window.print()}>
+          <Printer /> Print
+        </Button>
+      </div>
     </div>
   );
 }

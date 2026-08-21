@@ -55,7 +55,7 @@ export function BottomNav({ permissions = "all" }: { permissions?: NavPermission
   return (
     <>
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.15)] lg:hidden print:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background pb-[min(env(safe-area-inset-bottom),0.5rem)] shadow-[0_-4px_16px_-8px_rgba(0,0,0,0.15)] lg:hidden print:hidden"
       >
         {mainItems.map((item) => {
           const ItemIcon = item.icon;
@@ -65,11 +65,11 @@ export function BottomNav({ permissions = "all" }: { permissions?: NavPermission
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[9px] leading-none font-medium transition-colors",
+                "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] leading-none font-medium transition-colors",
                 active ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              <ItemIcon className={cn("h-[18px] w-[18px]", active ? strongTone(item.tone) : "text-current opacity-70")} />
+              <ItemIcon className={cn("h-5 w-5", active ? strongTone(item.tone) : "text-current opacity-70")} />
               <span className="truncate">{item.label}</span>
             </Link>
           );
@@ -78,9 +78,9 @@ export function BottomNav({ permissions = "all" }: { permissions?: NavPermission
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[9px] leading-none font-medium text-muted-foreground transition-colors"
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] leading-none font-medium text-muted-foreground transition-colors"
           >
-            <MoreHorizontal className="h-[18px] w-[18px] opacity-70" />
+            <MoreHorizontal className="h-5 w-5 opacity-70" />
             <span className="truncate">More</span>
           </button>
         )}

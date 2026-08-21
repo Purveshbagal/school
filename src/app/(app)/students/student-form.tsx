@@ -81,6 +81,34 @@ export function StudentForm({
     undefined
   );
 
+  // Controlled so a failed submit (e.g. duplicate register number) keeps what
+  // was typed instead of React's auto form-reset wiping it back to blank.
+  const [values, setValues] = useState({
+    admissionNo: student?.admissionNo || "",
+    name: student?.name || "",
+    dob: formatDateInput(student?.dob),
+    birthPlace: student?.birthPlace || "",
+    aadharNumber: student?.aadharNumber || "",
+    gender: student?.gender || "",
+    penId: student?.penId || "",
+    apaarId: student?.apaarId || "",
+    fatherName: student?.fatherName || "",
+    motherName: student?.motherName || "",
+    phone: student?.phone || "",
+    motherTongue: student?.motherTongue || "",
+    religion: student?.religion || "",
+    caste: student?.caste || "",
+    subCaste: student?.subCaste || "",
+    medium: student?.medium || "",
+    board: student?.board || "",
+    address: student?.address || "",
+    admissionDate: student?.admissionDate ? formatDateInput(student.admissionDate) : today,
+    status: student?.status || "ACTIVE",
+  });
+  function updateValue<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
+    setValues((v) => ({ ...v, [key]: value }));
+  }
+
   const [standardId, setStandardId] = useState(student?.standardId || "");
   const [academicYear, setAcademicYear] = useState(student?.academicYear || defaultAcademicYear);
   const [discount, setDiscount] = useState(String(student?.discount ?? 0));
@@ -137,29 +165,68 @@ export function StudentForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="admissionNo">Register Number *</Label>
-              <Input id="admissionNo" name="admissionNo" required defaultValue={student?.admissionNo} />
+              <Input
+                id="admissionNo"
+                name="admissionNo"
+                required
+                aria-invalid={state?.field === "admissionNo"}
+                value={values.admissionNo}
+                onChange={(e) => updateValue("admissionNo", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="name">Full Name *</Label>
-              <Input id="name" name="name" required defaultValue={student?.name} />
+              <Input
+                id="name"
+                name="name"
+                required
+                value={values.name}
+                onChange={(e) => updateValue("name", e.target.value)}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="dob">Date of Birth</Label>
-              <Input id="dob" name="dob" type="date" defaultValue={formatDateInput(student?.dob)} />
+              <Input
+                id="dob"
+                name="dob"
+                type="date"
+                value={values.dob}
+                onChange={(e) => updateValue("dob", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="birthPlace">Birth Place</Label>
-              <Input id="birthPlace" name="birthPlace" defaultValue={student?.birthPlace || ""} />
+              <Input
+                id="birthPlace"
+                name="birthPlace"
+                value={values.birthPlace}
+                onChange={(e) => updateValue("birthPlace", e.target.value)}
+              />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="aadharNumber">Aadhar Card Number</Label>
-              <Input id="aadharNumber" name="aadharNumber" defaultValue={student?.aadharNumber || ""} />
+              <Label htmlFor="aadharNumber">Aadhar Card Number *</Label>
+              <Input
+                id="aadharNumber"
+                name="aadharNumber"
+                required
+                pattern="\d{12}"
+                maxLength={12}
+                title="Enter a 12 digit Aadhar Card Number"
+                aria-invalid={state?.field === "aadharNumber"}
+                value={values.aadharNumber}
+                onChange={(e) => updateValue("aadharNumber", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="gender">Gender</Label>
-              <NativeSelect id="gender" name="gender" defaultValue={student?.gender || ""}>
+              <NativeSelect
+                id="gender"
+                name="gender"
+                value={values.gender}
+                onChange={(e) => updateValue("gender", e.target.value)}
+              >
                 <option value="">Select</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -169,11 +236,21 @@ export function StudentForm({
 
             <div className="space-y-1.5">
               <Label htmlFor="penId">PEN ID</Label>
-              <Input id="penId" name="penId" defaultValue={student?.penId || ""} />
+              <Input
+                id="penId"
+                name="penId"
+                value={values.penId}
+                onChange={(e) => updateValue("penId", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="apaarId">APAAR ID</Label>
-              <Input id="apaarId" name="apaarId" defaultValue={student?.apaarId || ""} />
+              <Input
+                id="apaarId"
+                name="apaarId"
+                value={values.apaarId}
+                onChange={(e) => updateValue("apaarId", e.target.value)}
+              />
             </div>
           </div>
 
@@ -181,34 +258,69 @@ export function StudentForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="fatherName">Father&apos;s Name</Label>
-              <Input id="fatherName" name="fatherName" defaultValue={student?.fatherName || ""} />
+              <Input
+                id="fatherName"
+                name="fatherName"
+                value={values.fatherName}
+                onChange={(e) => updateValue("fatherName", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="motherName">Mother&apos;s Name</Label>
-              <Input id="motherName" name="motherName" defaultValue={student?.motherName || ""} />
+              <Input
+                id="motherName"
+                name="motherName"
+                value={values.motherName}
+                onChange={(e) => updateValue("motherName", e.target.value)}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="phone">Mobile Number</Label>
-              <Input id="phone" name="phone" defaultValue={student?.phone || ""} />
+              <Input
+                id="phone"
+                name="phone"
+                value={values.phone}
+                onChange={(e) => updateValue("phone", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="motherTongue">Mother Tongue</Label>
-              <Input id="motherTongue" name="motherTongue" defaultValue={student?.motherTongue || ""} />
+              <Input
+                id="motherTongue"
+                name="motherTongue"
+                value={values.motherTongue}
+                onChange={(e) => updateValue("motherTongue", e.target.value)}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="religion">Religion</Label>
-              <Input id="religion" name="religion" defaultValue={student?.religion || ""} />
+              <Input
+                id="religion"
+                name="religion"
+                value={values.religion}
+                onChange={(e) => updateValue("religion", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="caste">Caste</Label>
-              <Input id="caste" name="caste" defaultValue={student?.caste || ""} />
+              <Input
+                id="caste"
+                name="caste"
+                value={values.caste}
+                onChange={(e) => updateValue("caste", e.target.value)}
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="subCaste">Sub Caste</Label>
-              <Input id="subCaste" name="subCaste" defaultValue={student?.subCaste || ""} />
+              <Input
+                id="subCaste"
+                name="subCaste"
+                value={values.subCaste}
+                onChange={(e) => updateValue("subCaste", e.target.value)}
+              />
             </div>
           </div>
 
@@ -244,11 +356,21 @@ export function StudentForm({
 
             <div className="space-y-1.5">
               <Label htmlFor="medium">Medium</Label>
-              <Input id="medium" name="medium" defaultValue={student?.medium || ""} />
+              <Input
+                id="medium"
+                name="medium"
+                value={values.medium}
+                onChange={(e) => updateValue("medium", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="board">Board</Label>
-              <NativeSelect id="board" name="board" defaultValue={student?.board || ""}>
+              <NativeSelect
+                id="board"
+                name="board"
+                value={values.board}
+                onChange={(e) => updateValue("board", e.target.value)}
+              >
                 <option value="">Select Board</option>
                 <option value="CBSE">CBSE</option>
                 <option value="Maharashtra State Board">Maharashtra State Board</option>
@@ -272,7 +394,12 @@ export function StudentForm({
             {isEdit && (
               <div className="space-y-1.5">
                 <Label htmlFor="status">Status</Label>
-                <NativeSelect id="status" name="status" defaultValue={student?.status || "ACTIVE"}>
+                <NativeSelect
+                  id="status"
+                  name="status"
+                  value={values.status}
+                  onChange={(e) => updateValue("status", e.target.value)}
+                >
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
                 </NativeSelect>
@@ -284,7 +411,12 @@ export function StudentForm({
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="address">Address</Label>
-              <Input id="address" name="address" defaultValue={student?.address || ""} />
+              <Input
+                id="address"
+                name="address"
+                value={values.address}
+                onChange={(e) => updateValue("address", e.target.value)}
+              />
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -354,7 +486,8 @@ export function StudentForm({
                 id="admissionDate"
                 name="admissionDate"
                 type="date"
-                defaultValue={student?.admissionDate ? formatDateInput(student.admissionDate) : today}
+                value={values.admissionDate}
+                onChange={(e) => updateValue("admissionDate", e.target.value)}
               />
             </div>
             <div className="space-y-1.5">

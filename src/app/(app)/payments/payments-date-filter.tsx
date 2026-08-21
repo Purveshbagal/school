@@ -11,19 +11,35 @@ export function PaymentsDateFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentRange = searchParams.get("range") || "all";
+  const currentMode = searchParams.get("mode") || "all";
   const [range, setRange] = useState(currentRange);
   const [from, setFrom] = useState(searchParams.get("from") || "");
   const [to, setTo] = useState(searchParams.get("to") || "");
 
+  function buildUrl(range: string, from: string, to: string, mode: string) {
+    const params = new URLSearchParams();
+    params.set("range", range);
+    if (range === "custom" && from && to) {
+      params.set("from", from);
+      params.set("to", to);
+    }
+    if (mode !== "all") params.set("mode", mode);
+    return `/payments?${params.toString()}`;
+  }
+
   function applyRange(value: string) {
     setRange(value);
     if (value === "custom") return; // wait for from/to + Apply
-    router.push(`/payments?range=${value}`);
+    router.push(buildUrl(value, from, to, currentMode));
   }
 
   function applyCustom() {
     if (!from || !to) return;
-    router.push(`/payments?range=custom&from=${from}&to=${to}`);
+    router.push(buildUrl("custom", from, to, currentMode));
+  }
+
+  function applyMode(value: string) {
+    router.push(buildUrl(range, from, to, value));
   }
 
   return (
@@ -38,6 +54,16 @@ export function PaymentsDateFilter() {
             {opt.label}
           </option>
         ))}
+      </NativeSelect>
+
+      <NativeSelect
+        value={currentMode}
+        onChange={(e) => applyMode(e.target.value)}
+        className="sm:w-48"
+      >
+        <option value="all">All Modes</option>
+        <option value="ONLINE">Online</option>
+        <option value="CASH">Cash</option>
       </NativeSelect>
 
       {range === "custom" && (

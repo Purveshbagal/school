@@ -80,13 +80,17 @@ async function currentVillageBusFee(villageId: string | null): Promise<number> {
 }
 
 export async function createStudentAction(
-  _prevState: { error?: string } | undefined,
+  _prevState: { error?: string; field?: string } | undefined,
   formData: FormData
-): Promise<{ error?: string } | never> {
+): Promise<{ error?: string; field?: string } | never> {
   const fields = readCommonFields(formData);
 
   if (!fields.admissionNo || !fields.name || !fields.standardId || !fields.academicYear) {
     return { error: "Register number, name, standard and academic year are required" };
+  }
+
+  if (!/^\d{12}$/.test(fields.aadharNumber)) {
+    return { error: "Aadhar Card Number is required and must be exactly 12 digits", field: "aadharNumber" };
   }
 
   const busFeeSnapshot = await currentVillageBusFee(fields.villageId);
@@ -96,7 +100,7 @@ export async function createStudentAction(
     student = await prisma.student.create({ data: { ...fields, busFeeSnapshot } });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { error: "A student with this register number already exists" };
+      return { error: "A student with this register number already exists", field: "admissionNo" };
     }
     throw e;
   }
@@ -106,15 +110,19 @@ export async function createStudentAction(
 }
 
 export async function updateStudentAction(
-  _prevState: { error?: string } | undefined,
+  _prevState: { error?: string; field?: string } | undefined,
   formData: FormData
-): Promise<{ error?: string } | never> {
+): Promise<{ error?: string; field?: string } | never> {
   const id = String(formData.get("id"));
   const fields = readCommonFields(formData);
   const status = String(formData.get("status") || "ACTIVE");
 
   if (!fields.admissionNo || !fields.name || !fields.standardId || !fields.academicYear) {
     return { error: "Register number, name, standard and academic year are required" };
+  }
+
+  if (!/^\d{12}$/.test(fields.aadharNumber)) {
+    return { error: "Aadhar Card Number is required and must be exactly 12 digits", field: "aadharNumber" };
   }
 
   const busFeeSnapshot = await currentVillageBusFee(fields.villageId);
@@ -126,7 +134,7 @@ export async function updateStudentAction(
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { error: "A student with this register number already exists" };
+      return { error: "A student with this register number already exists", field: "admissionNo" };
     }
     throw e;
   }

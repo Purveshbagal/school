@@ -58,38 +58,39 @@ export default async function ReceiptPage({
           address={settings?.address}
           udise={settings?.udise}
           phone={settings?.phone}
+          topLeft={
+            <>
+              <p className="text-slate-400">Standard</p>
+              <p className="font-semibold text-slate-700">{payment.student.standard.name}</p>
+            </>
+          }
+          topRight={
+            <>
+              <p className="text-slate-400">Date</p>
+              <p className="font-semibold text-slate-700">{formatDate(payment.paymentDate)}</p>
+            </>
+          }
         />
 
         <div className="my-5 border-t border-dashed border-slate-300" />
 
-        <div className="grid grid-cols-2 gap-y-2 text-sm">
+        <div className="text-center">
+          <p className="text-xs text-slate-500">Student Name</p>
+          <p className="text-xl font-bold text-slate-900">{payment.student.name}</p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-y-2 text-sm">
           <div>
             <span className="text-slate-500">Receipt No: </span>
             <span className="font-semibold">{payment.receiptNo}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-slate-500">Date: </span>
-            <span className="font-semibold">{formatDate(payment.paymentDate)}</span>
-          </div>
-          <div>
-            <span className="text-slate-500">Student Name: </span>
-            <span className="font-semibold">{payment.student.name}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-slate-500">Register Number: </span>
-            <span className="font-semibold">{payment.student.admissionNo}</span>
-          </div>
-          <div>
-            <span className="text-slate-500">Standard: </span>
-            <span className="font-semibold">{payment.student.standard.name}</span>
           </div>
           <div className="text-right">
             <span className="text-slate-500">Academic Year: </span>
             <span className="font-semibold">{payment.academicYear}</span>
           </div>
           <div>
-            <span className="text-slate-500">Father&apos;s Name: </span>
-            <span className="font-semibold">{payment.student.fatherName || "-"}</span>
+            <span className="text-slate-500">Address: </span>
+            <span className="font-semibold">{payment.student.address || "-"}</span>
           </div>
           <div className="text-right">
             <span className="text-slate-500">Payment Mode: </span>

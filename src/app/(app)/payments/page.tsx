@@ -23,22 +23,24 @@ import type { Prisma } from "@/generated/prisma/client";
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; mode?: string }>;
 }) {
-  const { range, from, to } = await searchParams;
+  const { range, from, to, mode } = await searchParams;
   const { start, end } = resolveDateRange(range, from, to);
   const isFiltered = Boolean(start && end);
+  const isModeFiltered = Boolean(mode && mode !== "all");
 
-  const where: Prisma.FeePaymentWhereInput = isFiltered
-    ? { paymentDate: { gte: start, lte: end } }
-    : {};
+  const where: Prisma.FeePaymentWhereInput = {
+    ...(isFiltered ? { paymentDate: { gte: start, lte: end } } : {}),
+    ...(isModeFiltered ? { mode } : {}),
+  };
 
   const [payments, totalCollected] = await Promise.all([
     prisma.feePayment.findMany({
       where,
       include: { student: { include: { standard: true } } },
       orderBy: { createdAt: "desc" },
-      ...(isFiltered ? {} : { take: 50 }),
+      ...(isFiltered || isModeFiltered ? {} : { take: 50 }),
     }),
     prisma.feePayment.aggregate({ where, _sum: { amount: true } }),
   ]);

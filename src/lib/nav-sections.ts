@@ -101,3 +101,20 @@ export const NAV_SECTIONS: NavSection[] = [
 export const GRANTABLE_NAV_SECTIONS = NAV_SECTIONS.filter((section) => section.label !== "Settings");
 
 export const ALL_NAV_HREFS = NAV_SECTIONS.flatMap((section) => section.items.map((item) => item.href));
+
+/** "all" for admins (full access); an array of granted hrefs for staff accounts. */
+export type NavPermissions = "all" | string[];
+
+/** Nav sections visible to a given permission set, with empty sections dropped. */
+export function getVisibleNavSections(permissions: NavPermissions): NavSection[] {
+  if (permissions === "all") return NAV_SECTIONS;
+  return NAV_SECTIONS.filter((section) => section.label !== "Settings")
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => permissions.includes(item.href)),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+/** Hrefs prioritized for the mobile bottom nav's fixed slots, in order of preference. */
+export const BOTTOM_NAV_PRIORITY_HREFS = ["/dashboard", "/students", "/exams/marks", "/pending-fees"];

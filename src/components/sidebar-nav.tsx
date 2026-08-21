@@ -5,23 +5,11 @@ import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
-import { NAV_SECTIONS } from "@/lib/nav-sections";
+import { getVisibleNavSections, type NavPermissions } from "@/lib/nav-sections";
 import { NotificationBell, type NotificationItem } from "@/components/notification-bell";
 
 export { NAV_SECTIONS, GRANTABLE_NAV_SECTIONS } from "@/lib/nav-sections";
-
-/** "all" for admins (full access); an array of granted hrefs for staff accounts. */
-export type NavPermissions = "all" | string[];
-
-function visibleSections(permissions: NavPermissions) {
-  if (permissions === "all") return NAV_SECTIONS;
-  return NAV_SECTIONS.filter((section) => section.label !== "Settings")
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => permissions.includes(item.href)),
-    }))
-    .filter((section) => section.items.length > 0);
-}
+export type { NavPermissions } from "@/lib/nav-sections";
 
 export function NavLinks({
   onNavigate,
@@ -31,7 +19,7 @@ export function NavLinks({
   permissions?: NavPermissions;
 }) {
   const pathname = usePathname();
-  const sections = visibleSections(permissions);
+  const sections = getVisibleNavSections(permissions);
 
   return (
     <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">

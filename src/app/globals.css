@@ -147,6 +147,24 @@
   }
 }
 
+/* Mobile-only: shrink Tailwind's font-size scale app-wide (all text-* utilities
+   read font-size from these theme vars). Desktop (lg and up) is untouched;
+   spacing/padding tokens are separate (--spacing) so layout sizing is unaffected. */
+@media (max-width: 63.9375rem) {
+  :root {
+    --text-xs: 0.625rem;
+    --text-sm: 0.6875rem;
+    --text-base: 0.8125rem;
+    --text-lg: 0.9375rem;
+    --text-xl: 1rem;
+    --text-2xl: 1.125rem;
+    --text-3xl: 1.375rem;
+    --text-4xl: 1.625rem;
+    --text-5xl: 2rem;
+    --text-6xl: 2.5rem;
+  }
+}
+
 @media print {
   @page {
     size: A4;

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { Topbar } from "@/components/topbar";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default async function AppLayout({
   children,
@@ -34,10 +35,11 @@ export default async function AppLayout({
           permissions={permissions}
           notifications={notifications}
         />
-        <main className="w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-8 2xl:px-12">
+        <main className="w-full px-4 py-6 pb-20 sm:px-6 lg:px-8 lg:py-8 lg:pb-8 2xl:px-12">
           {children}
         </main>
       </div>
+      <BottomNav permissions={permissions} />
     </div>
   );
 }

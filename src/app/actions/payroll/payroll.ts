@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeLedgerEntry } from "@/lib/ledger";
@@ -105,80 +106,88 @@ export async function generatePayrollAction(
   const session = await getSession();
   const invoiceNo = await nextPayrollInvoiceNo();
 
-  const payroll = await prisma.$transaction(async (tx) => {
-    const created = await tx.payroll.create({
-      data: {
-        teacherId,
-        month,
-        year,
-        invoiceNo,
-        salaryStructureId: structure.id,
-        workingDays: attendance.workingDays,
-        presentDays: Math.max(
-          0,
-          attendance.workingDays - attendance.absentDays - attendance.halfDays - attendance.paidLeaveDays - attendance.unpaidLeaveDays
-        ),
-        absentDays: attendance.absentDays,
-        halfDays: attendance.halfDays,
-        paidLeaveDays: attendance.paidLeaveDays,
-        unpaidLeaveDays: attendance.unpaidLeaveDays,
-        lateCount: attendance.lateCount,
-        grossSalary: result.grossSalary,
-        leaveDeduction: result.leaveDeduction,
-        halfDayDeduction: result.halfDayDeduction,
-        lateDeduction: result.lateDeduction,
-        statutoryDeductionsTotal: result.pfAmount + result.esicAmount + result.professionalTaxAmount,
-        otherDeductionsTotal: result.otherDeductionsTotal,
-        bonusTotal: 0,
-        advanceApplied,
-        previousPending,
-        netPayable: result.netPayable,
-        paidAmount: 0,
-        pendingAmount: result.pendingAmount,
-        status: result.status,
-        deletedAt: null,
-        createdBy: session?.username,
-      },
-    });
-
-    // Consume outstanding advances oldest-first up to advanceApplied.
-    let remaining = advanceApplied;
-    for (const adv of outstandingAdvances) {
-      if (remaining <= 0) break;
-      const available = adv.amount - adv.adjustedAmount;
-      const consume = Math.min(available, remaining);
-      const newAdjusted = adv.adjustedAmount + consume;
-      await tx.advancePayment.update({
-        where: { id: adv.id },
+  let payroll;
+  try {
+    payroll = await prisma.$transaction(async (tx) => {
+      const created = await tx.payroll.create({
         data: {
-          adjustedAmount: newAdjusted,
-          status: newAdjusted >= adv.amount ? "ADJUSTED" : "PARTIALLY_ADJUSTED",
-          updatedBy: session?.username,
+          teacherId,
+          month,
+          year,
+          invoiceNo,
+          salaryStructureId: structure.id,
+          workingDays: attendance.workingDays,
+          presentDays: Math.max(
+            0,
+            attendance.workingDays - attendance.absentDays - attendance.halfDays - attendance.paidLeaveDays - attendance.unpaidLeaveDays
+          ),
+          absentDays: attendance.absentDays,
+          halfDays: attendance.halfDays,
+          paidLeaveDays: attendance.paidLeaveDays,
+          unpaidLeaveDays: attendance.unpaidLeaveDays,
+          lateCount: attendance.lateCount,
+          grossSalary: result.grossSalary,
+          leaveDeduction: result.leaveDeduction,
+          halfDayDeduction: result.halfDayDeduction,
+          lateDeduction: result.lateDeduction,
+          statutoryDeductionsTotal: result.pfAmount + result.esicAmount + result.professionalTaxAmount,
+          otherDeductionsTotal: result.otherDeductionsTotal,
+          bonusTotal: 0,
+          advanceApplied,
+          previousPending,
+          netPayable: result.netPayable,
+          paidAmount: 0,
+          pendingAmount: result.pendingAmount,
+          status: result.status,
+          deletedAt: null,
+          createdBy: session?.username,
         },
       });
-      remaining -= consume;
+
+      // Consume outstanding advances oldest-first up to advanceApplied.
+      let remaining = advanceApplied;
+      for (const adv of outstandingAdvances) {
+        if (remaining <= 0) break;
+        const available = adv.amount - adv.adjustedAmount;
+        const consume = Math.min(available, remaining);
+        const newAdjusted = adv.adjustedAmount + consume;
+        await tx.advancePayment.update({
+          where: { id: adv.id },
+          data: {
+            adjustedAmount: newAdjusted,
+            status: newAdjusted >= adv.amount ? "ADJUSTED" : "PARTIALLY_ADJUSTED",
+            updatedBy: session?.username,
+          },
+        });
+        remaining -= consume;
+      }
+
+      await writeLedgerEntry(tx, {
+        teacherId,
+        type: "SALARY_GENERATED",
+        amount: result.netPayable,
+        description: `Salary generated for ${month}/${year} — Net Payable ${formatCurrency(result.netPayable)}`,
+        refId: created.id,
+        createdBy: session?.username,
+      });
+
+      await createNotification(tx, {
+        type: "SALARY_GENERATED",
+        audience: "ADMIN",
+        teacherId,
+        title: "Salary generated",
+        message: `${teacher.name}'s salary for ${month}/${year} has been generated — Net Payable ${formatCurrency(result.netPayable)}.`,
+        createdBy: session?.username,
+      });
+
+      return created;
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === "P2002" || e.message.includes("write conflict"))) {
+      return { error: "Salary for this period may have already been generated. Please refresh and check before retrying." };
     }
-
-    await writeLedgerEntry(tx, {
-      teacherId,
-      type: "SALARY_GENERATED",
-      amount: result.netPayable,
-      description: `Salary generated for ${month}/${year} — Net Payable ${formatCurrency(result.netPayable)}`,
-      refId: created.id,
-      createdBy: session?.username,
-    });
-
-    await createNotification(tx, {
-      type: "SALARY_GENERATED",
-      audience: "ADMIN",
-      teacherId,
-      title: "Salary generated",
-      message: `${teacher.name}'s salary for ${month}/${year} has been generated — Net Payable ${formatCurrency(result.netPayable)}.`,
-      createdBy: session?.username,
-    });
-
-    return created;
-  });
+    throw e;
+  }
 
   revalidatePath("/payroll");
   revalidatePath("/salary-slips");

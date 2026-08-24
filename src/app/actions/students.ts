@@ -30,6 +30,7 @@ function readCommonFields(formData: FormData) {
   const subCaste = String(formData.get("subCaste") || "").trim();
   const medium = String(formData.get("medium") || "").trim();
   const board = String(formData.get("board") || "").trim();
+  const photoUrl = String(formData.get("photoUrl") || "").trim();
   const schoolBus = String(formData.get("schoolBus") || "false") === "true";
   const admissionDate = formData.get("admissionDate")
     ? new Date(String(formData.get("admissionDate")))
@@ -63,6 +64,7 @@ function readCommonFields(formData: FormData) {
     subCaste,
     medium,
     board,
+    photoUrl: photoUrl || null,
     schoolBus,
     admissionDate,
     academicYear,

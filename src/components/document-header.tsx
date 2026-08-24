@@ -6,6 +6,8 @@ export function DocumentHeader({
   phone,
   topLeft,
   topRight,
+  cornerLeft,
+  cornerRight,
 }: {
   docType: string;
   schoolName: string;
@@ -14,9 +16,19 @@ export function DocumentHeader({
   phone?: string | null;
   topLeft?: React.ReactNode;
   topRight?: React.ReactNode;
+  /** Small text pinned to the very top-left of the document, above the title (e.g. UDISE code). */
+  cornerLeft?: React.ReactNode;
+  /** Small text pinned to the very top-right of the document, above the title (e.g. established year). */
+  cornerRight?: React.ReactNode;
 }) {
   return (
     <div className="border-b-2 border-blue-700 pb-4">
+      {(cornerLeft || cornerRight) && (
+        <div className="mb-1 flex items-center justify-between text-[10px] font-semibold text-red-600 sm:text-xs">
+          <span>{cornerLeft}</span>
+          <span>{cornerRight}</span>
+        </div>
+      )}
       <p className="mb-2 text-center text-xs font-semibold tracking-widest text-blue-700 uppercase">
         {docType}
       </p>

@@ -41,7 +41,11 @@ export default async function SlipPage({
   return (
     <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
       <div className="mx-auto mb-4 max-w-2xl px-4 print:hidden">
-        <PrintDownloadActions targetId="print-content" fileName={`Salary-Slip-${slip.invoiceNo}`} />
+        <PrintDownloadActions
+          targetId="print-content"
+          fileName={`Salary-Slip-${slip.invoiceNo}`}
+          backHref={`/teachers/${slip.teacherId}`}
+        />
       </div>
 
       <div

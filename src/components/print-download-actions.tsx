@@ -10,13 +10,38 @@ export function PrintDownloadActions({
   fileName,
   pdfFormat = "a4",
   pdfOrientation = "portrait",
+  backHref,
 }: {
   targetId: string;
   fileName: string;
   pdfFormat?: "a4" | "a5";
   pdfOrientation?: "portrait" | "landscape";
+  /** Where Back should go when this page was opened directly (new tab, refresh, shared
+   * link) and there's no browser history to go back to — router.back() is a silent no-op
+   * in that case. */
+  backHref?: string;
 }) {
   const router = useRouter();
+
+  function handleBack() {
+    // A same-origin referrer means this page was reached by an in-app navigation, so
+    // there's a real history entry for router.back() to land on. Without one — the page
+    // was opened directly (new tab, bookmark, refresh, shared link) — history.length can
+    // still be >1 (browsers count the tab's initial blank entry), so router.back() silently
+    // lands on about:blank instead of doing anything visible.
+    let sameOriginReferrer = false;
+    try {
+      sameOriginReferrer = Boolean(document.referrer) && new URL(document.referrer).origin === window.location.origin;
+    } catch {
+      sameOriginReferrer = false;
+    }
+
+    if (backHref && !sameOriginReferrer) {
+      router.push(backHref);
+    } else {
+      router.back();
+    }
+  }
   const [downloading, setDownloading] = useState(false);
   const [downloadingJpg, setDownloadingJpg] = useState(false);
 
@@ -124,7 +149,7 @@ export function PrintDownloadActions({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-      <Button variant="outline" onClick={() => router.back()}>
+      <Button variant="outline" onClick={handleBack}>
         <ArrowLeft /> Back
       </Button>
       <div className="flex flex-wrap justify-end gap-2">

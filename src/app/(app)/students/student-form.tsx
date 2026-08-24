@@ -8,7 +8,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
 import { createStudentAction, updateStudentAction } from "@/app/actions/students";
 import { formatDateInput } from "@/lib/utils";
-import { UserRound, Users, GraduationCap, MapPin, Wallet, type LucideIcon } from "lucide-react";
+import { UserRound, Users, GraduationCap, MapPin, Wallet, ImagePlus, X, type LucideIcon } from "lucide-react";
 
 type Standard = { id: string; name: string };
 type FeeStructureLookup = { standardId: string; academicYear: string; totalAmount: number };
@@ -39,6 +39,7 @@ type StudentValues = {
   subCaste?: string | null;
   medium?: string | null;
   board?: string | null;
+  photoUrl?: string | null;
   schoolBus?: boolean;
   standardId?: string;
   academicYear?: string;
@@ -122,6 +123,48 @@ export function StudentForm({
   const [villageName, setVillageName] = useState(student?.village || "");
   const [schoolBus, setSchoolBus] = useState(student?.schoolBus ? "true" : "false");
 
+  const [photoUrl, setPhotoUrl] = useState(student?.photoUrl || "");
+  const [photoError, setPhotoError] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Downscales to a passport-photo-sized JPEG data URL client-side, so the base64 string
+  // saved on the student record (there's no file storage in this app) stays small regardless
+  // of how large the source photo is.
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError("");
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please choose an image file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 480;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setPhotoUrl(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearPhoto() {
+    setPhotoUrl("");
+    setPhotoError("");
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  }
+
   const selectedDistrict = districts.find((d) => d.name === districtName);
   const talukaOptions = selectedDistrict?.talukas || [];
   const selectedTaluka = talukaOptions.find((t) => t.name === talukaName);
@@ -162,6 +205,39 @@ export function StudentForm({
           {isEdit && <input type="hidden" name="id" value={student!.id} />}
 
           <SectionTitle icon={UserRound} title="Student Information" />
+
+          <div className="mb-4 flex items-center gap-4">
+            <div className="flex h-28 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/40">
+              {photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoUrl} alt="Student" className="h-full w-full object-cover" />
+              ) : (
+                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="photoInput">Photo (Passport Size)</Label>
+              <input type="hidden" name="photoUrl" value={photoUrl} />
+              <div className="flex items-center gap-2">
+                <input
+                  ref={photoInputRef}
+                  id="photoInput"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary hover:file:bg-primary/20"
+                />
+                {photoUrl && (
+                  <Button type="button" variant="ghost" size="sm" onClick={clearPhoto}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {photoError && <p className="text-xs text-destructive">{photoError}</p>}
+              <p className="text-xs text-muted-foreground">Shown on the printed Admission Form.</p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="admissionNo">Register Number *</Label>

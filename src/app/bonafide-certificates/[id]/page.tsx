@@ -55,6 +55,7 @@ export default async function BonafideCertificatePage({
           fileName={`Bonafide-Certificate-${certificate.certificateNo}`}
           pdfFormat="a5"
           pdfOrientation="landscape"
+          backHref={`/students/${certificate.studentId}`}
         />
       </div>
 

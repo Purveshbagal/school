@@ -36,6 +36,7 @@ export default async function FeeStructurePage({
           fileName={`Fee-Structure-${student.admissionNo}`}
           pdfFormat="a5"
           pdfOrientation="portrait"
+          backHref={`/students/${student.id}`}
         />
       </div>
 

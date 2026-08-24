@@ -38,7 +38,11 @@ export default async function StationaryPaymentReceiptPage({
   return (
     <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
       <div className="mx-auto mb-4 max-w-2xl px-4 print:hidden">
-        <PrintDownloadActions targetId="print-content" fileName={`Receipt-${payment.receiptNo}`} />
+        <PrintDownloadActions
+          targetId="print-content"
+          fileName={`Receipt-${payment.receiptNo}`}
+          backHref="/stationary/payments"
+        />
       </div>
 
       <div

@@ -50,7 +50,11 @@ export default async function LeavingCertificatePage({
             className="border border-transparent hover:border-destructive/20"
           />
         </div>
-        <PrintDownloadActions targetId="print-content" fileName={`Leaving-Certificate-${certificate.certificateNo}`} />
+        <PrintDownloadActions
+          targetId="print-content"
+          fileName={`Leaving-Certificate-${certificate.certificateNo}`}
+          backHref={`/students/${certificate.studentId}`}
+        />
       </div>
 
       <div

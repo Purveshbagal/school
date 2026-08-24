@@ -1,9 +1,19 @@
 import { prisma } from "@/lib/db";
 
+/** Parses the zero-padded numeric suffix after `prefix` in `value`, or 0 if absent/invalid. */
+function seqAfter(value: string, prefix: string): number {
+  return parseInt(value.slice(prefix.length), 10) || 0;
+}
+
 export async function nextEmployeeNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.teacher.count();
-  return `EMP${year}${String(count + 1).padStart(3, "0")}`;
+  const prefix = `EMP${year}`;
+  const last = await prisma.teacher.findFirst({
+    where: { employeeNo: { startsWith: prefix } },
+    orderBy: { employeeNo: "desc" },
+  });
+  const lastSeq = last ? seqAfter(last.employeeNo, prefix) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(3, "0")}`;
 }
 
 export async function nextReceiptNo(): Promise<string> {
@@ -13,42 +23,72 @@ export async function nextReceiptNo(): Promise<string> {
     where: { receiptNo: { startsWith: prefix } },
     orderBy: { receiptNo: "desc" },
   });
-  const lastSeq = last ? parseInt(last.receiptNo.slice(prefix.length), 10) || 0 : 0;
+  const lastSeq = last ? seqAfter(last.receiptNo, prefix) : 0;
   return `${prefix}${String(lastSeq + 1).padStart(5, "0")}`;
 }
 
 export async function nextInvoiceNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.salarySlip.count();
-  return `SAL-${year}-${String(count + 1).padStart(5, "0")}`;
+  const prefix = `SAL-${year}-`;
+  const last = await prisma.salarySlip.findFirst({
+    where: { invoiceNo: { startsWith: prefix } },
+    orderBy: { invoiceNo: "desc" },
+  });
+  const lastSeq = last ? seqAfter(last.invoiceNo, prefix) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(5, "0")}`;
 }
 
 export async function nextPayrollInvoiceNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.payroll.count();
-  return `PAY-${year}-${String(count + 1).padStart(5, "0")}`;
+  const prefix = `PAY-${year}-`;
+  const last = await prisma.payroll.findFirst({
+    where: { invoiceNo: { startsWith: prefix } },
+    orderBy: { invoiceNo: "desc" },
+  });
+  const lastSeq = last ? seqAfter(last.invoiceNo, prefix) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(5, "0")}`;
 }
 
 export async function nextCertificateNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.leavingCertificate.count();
-  return `LC-${year}-${String(count + 1).padStart(4, "0")}`;
+  const prefix = `LC-${year}-`;
+  const last = await prisma.leavingCertificate.findFirst({
+    where: { certificateNo: { startsWith: prefix } },
+    orderBy: { certificateNo: "desc" },
+  });
+  const lastSeq = last ? seqAfter(last.certificateNo, prefix) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(4, "0")}`;
 }
 
 export async function nextBonafideCertificateNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.bonafideCertificate.count();
-  return `BC-${year}-${String(count + 1).padStart(4, "0")}`;
+  const prefix = `BC-${year}-`;
+  const last = await prisma.bonafideCertificate.findFirst({
+    where: { certificateNo: { startsWith: prefix } },
+    orderBy: { certificateNo: "desc" },
+  });
+  const lastSeq = last ? seqAfter(last.certificateNo, prefix) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(4, "0")}`;
 }
 
 export async function nextSaleNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.stationarySale.count();
-  return `STY-${year}-${String(count + 1).padStart(5, "0")}`;
+  const prefix = `STY-${year}-`;
+  const last = await prisma.stationarySale.findFirst({
+    where: { saleNo: { startsWith: prefix } },
+    orderBy: { saleNo: "desc" },
+  });
+  const lastSeq = last ? seqAfter(last.saleNo, prefix) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(5, "0")}`;
 }
 
 export async function nextStationaryReceiptNo(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.stationarySalePayment.count();
-  return `STYPAY-${year}-${String(count + 1).padStart(5, "0")}`;
+  const prefix = `STYPAY-${year}-`;
+  const last = await prisma.stationarySalePayment.findFirst({
+    where: { receiptNo: { startsWith: prefix } },
+    orderBy: { receiptNo: "desc" },
+  });
+  const lastSeq = last ? seqAfter(last.receiptNo, prefix) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(5, "0")}`;
 }

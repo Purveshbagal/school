@@ -133,6 +133,26 @@ export async function getFeesOverview() {
   return { totalFees, totalCollected, totalPending };
 }
 
+/** Determines which fee-payment threshold (if any) gates a given exam's result, based on
+ * the exam's name — "semester"/"semister" exams require 40% paid, "annual" exams require
+ * 95% paid, everything else is ungated. Matching is name-based (not a stored exam type) so
+ * the rule keeps applying even if the exam is deleted and recreated with the same name. */
+export function getExamFeeGateThreshold(examName: string): number | null {
+  const name = examName.toLowerCase();
+  if (name.includes("annual")) return 0.95;
+  if (name.includes("semester") || name.includes("semister")) return 0.4;
+  return null;
+}
+
+/** Checks whether a student has paid enough of their current-year fees to clear the given
+ * threshold (0-1). Returns paidPct so callers can show it in a "fees pending" message. */
+export async function checkFeePaymentGate(studentId: string, threshold: number) {
+  const summary = await getStudentFeeSummary(studentId);
+  if (!summary) return { passed: false, paidPct: 0 };
+  const paidPct = summary.totalFee > 0 ? summary.totalPaid / summary.totalFee : 1;
+  return { passed: paidPct >= threshold, paidPct };
+}
+
 /** Flat, highest-due-first list of active students who still owe fees — used as the
  * default shortlist on the "Payment In" search screen before the admin types anything. */
 export async function getPendingFeesStudents(limit = 25) {

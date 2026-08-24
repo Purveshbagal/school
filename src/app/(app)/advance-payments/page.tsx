@@ -20,13 +20,14 @@ import { AdvancePaymentsViewTabs } from "./advance-payments-view-tabs";
 import { deleteAdvanceAction } from "@/app/actions/payroll/advance-payments";
 import { Send, Pencil } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
 export default async function AdvancePaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; view?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; view?: string; q?: string }>;
 }) {
-  const { range, from, to, view } = await searchParams;
+  const { range, from, to, view, q } = await searchParams;
   const { start, end } = resolveDateRange(range, from, to);
   const isFiltered = Boolean(start && end);
   const rangeLabel = RANGE_OPTIONS.find((o) => o.value === (range || "all"))?.label || "All";
@@ -35,10 +36,14 @@ export default async function AdvancePaymentsPage({
   const advanceWhere: Prisma.AdvancePaymentWhereInput = {
     deletedAt: null,
     ...(isFiltered ? { date: { gte: start, lte: end } } : {}),
+    ...(q ? { teacher: { name: { contains: q, mode: "insensitive" } } } : {}),
   };
 
   const [teachers, advanceTotals, grandTotal] = await Promise.all([
-    prisma.teacher.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.teacher.findMany({
+      where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
+      orderBy: { createdAt: "desc" },
+    }),
     prisma.advancePayment.groupBy({ by: ["teacherId"], where: advanceWhere, _sum: { amount: true } }),
     prisma.advancePayment.aggregate({ where: advanceWhere, _sum: { amount: true } }),
   ]);
@@ -78,11 +83,16 @@ export default async function AdvancePaymentsPage({
         <CardContent>
           <AdvancePaymentsViewTabs />
           <AdvancePaymentsDateFilter />
+          <StaffSearchFilter placeholder="Search by name..." />
 
           {activeView === "payments" ? (
             payments.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
-                {isFiltered ? `No advances found for ${rangeLabel}.` : 'No advances recorded yet. Click "Give Advance" to record one.'}
+                {q
+                  ? "No staff members match your search."
+                  : isFiltered
+                    ? `No advances found for ${rangeLabel}.`
+                    : 'No advances recorded yet. Click "Give Advance" to record one.'}
               </p>
             ) : (
               <>
@@ -162,7 +172,9 @@ export default async function AdvancePaymentsPage({
               </>
             )
           ) : teachers.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No staff members added yet.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {q ? "No staff members match your search." : "No staff members added yet."}
+            </p>
           ) : (
             <>
               <div className="space-y-3 md:hidden">

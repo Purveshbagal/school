@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Table2 } from "lucide-react";
 
 export default async function StandardMarksPage({
   params,
@@ -28,6 +28,14 @@ export default async function StandardMarksPage({
         title={`Students Marks — ${standard.name}`}
         description={`${students.length} active student${students.length === 1 ? "" : "s"}`}
       />
+
+      <div className="mb-4 flex justify-end">
+        <Button variant="outline" size="sm" render={
+          <Link href={`/exams/marks/${standardId}/bulk`}>
+            <Table2 /> Bulk Fill Marks
+          </Link>
+        } />
+      </div>
 
       <Card>
         <CardContent>

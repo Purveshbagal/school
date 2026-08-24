@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { MONTH_NAMES } from "@/lib/payroll-engine";
 import { Printer } from "lucide-react";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "outline"> = {
   PAID: "success",
@@ -22,9 +23,17 @@ const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "ou
   GENERATED: "destructive",
 };
 
-export default async function SalarySlipsPage() {
+export default async function SalarySlipsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const payrolls = await prisma.payroll.findMany({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(q ? { teacher: { name: { contains: q, mode: "insensitive" } } } : {}),
+    },
     include: { teacher: true },
     orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "desc" }],
     take: 100,
@@ -36,9 +45,11 @@ export default async function SalarySlipsPage() {
 
       <Card>
         <CardContent>
+          <StaffSearchFilter placeholder="Search by name..." />
+
           {payrolls.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              No salary slips generated yet. Generate one from the Payroll section.
+              {q ? "No staff members match your search." : "No salary slips generated yet. Generate one from the Payroll section."}
             </p>
           ) : (
             <>

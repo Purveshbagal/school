@@ -13,9 +13,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { TrendingUp } from "lucide-react";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
-export default async function SalaryStructurePage() {
+export default async function SalaryStructurePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const teachers = await prisma.teacher.findMany({
+    where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
     orderBy: { createdAt: "desc" },
     include: {
       salaryStructures: {
@@ -35,8 +42,12 @@ export default async function SalaryStructurePage() {
 
       <Card>
         <CardContent>
+          <StaffSearchFilter placeholder="Search by name..." />
+
           {teachers.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No staff members added yet.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {q ? "No staff members match your search." : "No staff members added yet."}
+            </p>
           ) : (
             <>
               <div className="space-y-3 md:hidden">

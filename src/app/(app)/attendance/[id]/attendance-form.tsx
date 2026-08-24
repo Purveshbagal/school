@@ -43,16 +43,15 @@ export function AttendanceForm({
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(saveAttendanceSummaryAction, undefined);
-  const [showDone, setShowDone] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const showDone = !!state?.success && !dismissed;
 
   useEffect(() => {
-    if (state?.success) {
-      setShowDone(true);
-      const timer = setTimeout(() => {
-        router.back();
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
+    if (!state?.success) return;
+    const timer = setTimeout(() => {
+      router.back();
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [state, router]);
 
   const [workingDays, setWorkingDays] = useState(defaultWorkingDays);
@@ -106,7 +105,7 @@ export function AttendanceForm({
 
   return (
     <Card>
-      <Dialog open={showDone} onOpenChange={setShowDone}>
+      <Dialog open={showDone} onOpenChange={(open) => { if (!open) setDismissed(true); }}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

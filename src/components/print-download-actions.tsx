@@ -32,11 +32,32 @@ export function PrintDownloadActions({
     });
   }
 
+  // Mobile browsers (iOS Safari in particular) largely ignore the anchor `download`
+  // attribute and silently drop `pdf.save()`/programmatic link clicks once they happen
+  // after an async gap (canvas capture, dynamic imports) — the click is no longer treated
+  // as a direct user gesture. The reliable fallback there is opening the generated file
+  // in a new tab as a blob URL, which lets the user view it and use the browser's own
+  // "Save to Files" / share sheet.
+  function isMobileBrowser() {
+    if (typeof navigator === "undefined") return false;
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return true;
+    // iPadOS 13+ Safari reports a desktop "Macintosh" UA by default; touch support
+    // is the only reliable signal distinguishing it from an actual Mac.
+    return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
+
   async function handleDownload() {
     setDownloading(true);
+    // Open the tab synchronously, inside the click handler, so mobile Safari still counts
+    // it as a direct user gesture — setting its location later (once the PDF is ready) is
+    // fine, but calling window.open() itself after an await gets silently blocked.
+    const mobileTab = isMobileBrowser() ? window.open("", "_blank") : null;
     try {
       const [canvas, { jsPDF }] = await Promise.all([captureCanvas(), import("jspdf")]);
-      if (!canvas) return;
+      if (!canvas) {
+        mobileTab?.close();
+        return;
+      }
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: pdfOrientation, unit: "mm", format: pdfFormat });
@@ -58,7 +79,11 @@ export function PrintDownloadActions({
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`${fileName}.pdf`);
+      if (mobileTab) {
+        mobileTab.location.href = pdf.output("bloburl").toString();
+      } else {
+        pdf.save(`${fileName}.pdf`);
+      }
     } finally {
       setDownloading(false);
     }
@@ -66,14 +91,32 @@ export function PrintDownloadActions({
 
   async function handleDownloadJpg() {
     setDownloadingJpg(true);
+    const mobileTab = isMobileBrowser() ? window.open("", "_blank") : null;
     try {
       const canvas = await captureCanvas();
-      if (!canvas) return;
+      if (!canvas) {
+        mobileTab?.close();
+        return;
+      }
 
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/jpeg", 0.95);
-      link.download = `${fileName}.jpg`;
-      link.click();
+      if (mobileTab) {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              mobileTab.close();
+              return;
+            }
+            mobileTab.location.href = URL.createObjectURL(blob);
+          },
+          "image/jpeg",
+          0.95
+        );
+      } else {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/jpeg", 0.95);
+        link.download = `${fileName}.jpg`;
+        link.click();
+      }
     } finally {
       setDownloadingJpg(false);
     }

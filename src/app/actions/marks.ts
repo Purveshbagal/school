@@ -3,6 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getExamFeeGateThreshold, checkFeePaymentGate } from "@/lib/fees";
+
+/** Runs async tasks with limited concurrency, so a large bulk save doesn't fire hundreds
+ * of simultaneous writes at once and exhaust the database connection pool. */
+async function runWithConcurrency<T>(items: T[], limit: number, task: (item: T) => Promise<unknown>) {
+  let index = 0;
+  async function worker() {
+    while (index < items.length) {
+      const item = items[index++];
+      await task(item);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
 
 export async function saveMarksAction(
   _prevState: { error?: string } | undefined,
@@ -85,6 +99,51 @@ export async function saveMarksAction(
   redirect(`/exams/marks/${standardId}/${studentId}?examId=${examId}`);
 }
 
+export type BulkMarksRow = {
+  studentId: string;
+  subjectId: string;
+  marksObtained: number;
+  totalMarks: number;
+};
+
+export async function saveBulkMarksAction(
+  standardId: string,
+  examId: string,
+  rows: BulkMarksRow[]
+): Promise<{ error?: string }> {
+  if (!standardId || !examId) return { error: "Please select a term/exam" };
+
+  const validRows = rows.filter((r) => r.totalMarks > 0);
+  if (validRows.length === 0) return { error: "Enter marks for at least one student/subject" };
+
+  const overLimit = validRows.filter((r) => r.marksObtained > r.totalMarks);
+  if (overLimit.length > 0) {
+    return { error: "Marks obtained cannot exceed total marks for one or more entries" };
+  }
+
+  await runWithConcurrency(validRows, 10, (r) =>
+    prisma.marks.upsert({
+      where: {
+        studentId_examId_subjectId: { studentId: r.studentId, examId, subjectId: r.subjectId },
+      },
+      create: {
+        studentId: r.studentId,
+        examId,
+        subjectId: r.subjectId,
+        marksObtained: r.marksObtained,
+        totalMarks: r.totalMarks,
+      },
+      update: {
+        marksObtained: r.marksObtained,
+        totalMarks: r.totalMarks,
+      },
+    })
+  );
+
+  revalidatePath(`/exams/marks/${standardId}/bulk`);
+  return {};
+}
+
 export type ResultLookupResult =
   | { error: string }
   | {
@@ -101,34 +160,17 @@ export type ResultLookupResult =
       totalStudents: number;
     };
 
-export async function lookupResultAction(
-  token: string,
-  aadharNumber: string
-): Promise<ResultLookupResult> {
-  const aadhar = aadharNumber.trim();
-  if (!aadhar) return { error: "Please enter the Aadhar card number" };
-
-  const exam = await prisma.exam.findUnique({ where: { resultToken: token } });
-  if (!exam || !exam.resultLinkActive) {
-    return { error: "This result link is no longer available." };
-  }
-
-  const student = await prisma.student.findFirst({
-    where: { aadharNumber: aadhar },
-    include: { standard: true },
-  });
-  if (!student) {
-    return { error: "No student found with this Aadhar card number." };
-  }
-
+/** Shared by lookupResultAction and getStudentExamResultAction: builds the marks table,
+ * totals, and class rank for one student/exam. Returns null if no marks are saved yet. */
+async function computeStudentExamResult(
+  student: { id: string; name: string; motherName: string | null; standardId: string; standard: { name: string } },
+  exam: { id: string; name: string; resultDate: Date }
+): Promise<Omit<Extract<ResultLookupResult, { rank: number }>, "error"> | null> {
   const marks = await prisma.marks.findMany({
     where: { studentId: student.id, examId: exam.id },
     include: { subject: true },
   });
-
-  if (marks.length === 0) {
-    return { error: "Result not available for this student yet." };
-  }
+  if (marks.length === 0) return null;
 
   const rows = marks.map((m) => ({
     subjectName: m.subject.name,
@@ -170,6 +212,66 @@ export async function lookupResultAction(
   };
 }
 
+export async function lookupResultAction(
+  token: string,
+  aadharNumber: string
+): Promise<ResultLookupResult> {
+  const aadhar = aadharNumber.trim();
+  if (!aadhar) return { error: "Please enter the Aadhar card number" };
+
+  const exam = await prisma.exam.findUnique({ where: { resultToken: token } });
+  if (!exam || !exam.resultLinkActive) {
+    return { error: "This result link is no longer available." };
+  }
+
+  const student = await prisma.student.findFirst({
+    where: { aadharNumber: aadhar },
+    include: { standard: true },
+  });
+  if (!student) {
+    return { error: "No student found with this Aadhar card number." };
+  }
+
+  const gateThreshold = getExamFeeGateThreshold(exam.name);
+  if (gateThreshold !== null) {
+    const { passed, paidPct } = await checkFeePaymentGate(student.id, gateThreshold);
+    if (!passed) {
+      return {
+        error: `Fees have not been paid. Please pay at least ${Math.round(gateThreshold * 100)}% of the total fees to view this result (${Math.round(paidPct * 100)}% paid so far).`,
+      };
+    }
+  }
+
+  const result = await computeStudentExamResult(student, exam);
+  if (!result) {
+    return { error: "Result not available for this student yet." };
+  }
+
+  return result;
+}
+
+/** Teacher-facing equivalent of lookupResultAction — same result shape, but looked up
+ * directly by studentId/examId (no Aadhar number, no result-link token, no fee gate)
+ * since this is used from the authenticated marks-entry screens, not the public link. */
+export async function getStudentExamResultAction(
+  studentId: string,
+  examId: string
+): Promise<ResultLookupResult> {
+  const [student, exam] = await Promise.all([
+    prisma.student.findUnique({ where: { id: studentId }, include: { standard: true } }),
+    prisma.exam.findUnique({ where: { id: examId } }),
+  ]);
+  if (!student) return { error: "Student not found." };
+  if (!exam) return { error: "Exam not found." };
+
+  const result = await computeStudentExamResult(student, exam);
+  if (!result) {
+    return { error: "No marks saved yet for this exam." };
+  }
+
+  return result;
+}
+
 export type FinalResultLookupResult =
   | { error: string }
   | {
@@ -200,6 +302,13 @@ export async function lookupFinalResultAction(
   });
   if (!student) {
     return { error: "No student found with this Aadhar card number." };
+  }
+
+  const { passed, paidPct } = await checkFeePaymentGate(student.id, 0.95);
+  if (!passed) {
+    return {
+      error: `Fees have not been paid. Please pay at least 95% of the total fees to view this result (${Math.round(paidPct * 100)}% paid so far).`,
+    };
   }
 
   const marks = await prisma.marks.findMany({

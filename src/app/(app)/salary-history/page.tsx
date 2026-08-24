@@ -12,18 +12,31 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { History } from "lucide-react";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
-export default async function SalaryHistoryIndexPage() {
-  const teachers = await prisma.teacher.findMany({ orderBy: { createdAt: "desc" } });
+export default async function SalaryHistoryIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  const teachers = await prisma.teacher.findMany({
+    where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div>
       <PageHeader title="Salary History" description="Full ledger timeline, revisions and payroll history per teacher" />
 
+      <StaffSearchFilter placeholder="Search by name..." />
+
       <Card>
         <CardContent>
           {teachers.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No staff members added yet.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {q ? "No staff members match your search." : "No staff members added yet."}
+            </p>
           ) : (
             <>
               <div className="space-y-3 md:hidden">

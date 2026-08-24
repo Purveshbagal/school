@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/utils";
 import { createExamAction, deleteExamAction } from "@/app/actions/exams";
 import { ensureFinalResultExam } from "@/lib/exams";
 import { ExamLinkActions } from "./exam-link-actions";
+import { EditExamDatesDialog } from "./edit-exam-dates-dialog";
 import { Plus } from "lucide-react";
 
 export default async function ExamsPage() {
@@ -75,11 +76,19 @@ export default async function ExamsPage() {
                         {exam.isFinal ? (
                           <span />
                         ) : (
-                          <DeleteButton
-                            action={deleteExamAction}
-                            hiddenFields={{ id: exam.id }}
-                            confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
-                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <EditExamDatesDialog
+                              examId={exam.id}
+                              examName={exam.name}
+                              examDate={exam.examDate}
+                              resultDate={exam.resultDate}
+                            />
+                            <DeleteButton
+                              action={deleteExamAction}
+                              hiddenFields={{ id: exam.id }}
+                              confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
+                            />
+                          </div>
                         )}
                         <ExamLinkActions
                           examId={exam.id}
@@ -130,11 +139,19 @@ export default async function ExamsPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           {!exam.isFinal && (
-                            <DeleteButton
-                              action={deleteExamAction}
-                              hiddenFields={{ id: exam.id }}
-                              confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
-                            />
+                            <div className="flex items-center justify-end gap-2">
+                              <EditExamDatesDialog
+                                examId={exam.id}
+                                examName={exam.name}
+                                examDate={exam.examDate}
+                                resultDate={exam.resultDate}
+                              />
+                              <DeleteButton
+                                action={deleteExamAction}
+                                hiddenFields={{ id: exam.id }}
+                                confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
+                              />
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>

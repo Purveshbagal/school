@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/document-header";
 import { PrintDownloadActions } from "@/components/print-download-actions";
+import { MobileScaleWrapper } from "@/components/mobile-scale-wrapper";
 import { FinalResultCard } from "./final-result-card";
 import { lookupFinalResultAction, type FinalResultLookupResult } from "@/app/actions/marks";
 
@@ -40,18 +41,20 @@ export function FinalResultLookupForm({
           <PrintDownloadActions targetId="final-result-card" fileName={`Final-Result-${result.studentName}`} />
         </div>
 
-        <FinalResultCard
-          schoolName={schoolName}
-          address={address}
-          phone={phone}
-          studentName={result.studentName}
-          motherName={result.motherName}
-          standardName={result.standardName}
-          terms={result.terms}
-          totalObtained={result.totalObtained}
-          totalMax={result.totalMax}
-          percentage={result.percentage}
-        />
+        <MobileScaleWrapper desktopWidth={640}>
+          <FinalResultCard
+            schoolName={schoolName}
+            address={address}
+            phone={phone}
+            studentName={result.studentName}
+            motherName={result.motherName}
+            standardName={result.standardName}
+            terms={result.terms}
+            totalObtained={result.totalObtained}
+            totalMax={result.totalMax}
+            percentage={result.percentage}
+          />
+        </MobileScaleWrapper>
 
         <Button
           variant="outline"

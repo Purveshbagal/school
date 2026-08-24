@@ -17,6 +17,7 @@ import { formatCurrency } from "@/lib/utils";
 import { MONTH_NAMES } from "@/lib/payroll-engine";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { CircleDollarSign } from "lucide-react";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "outline"> = {
   PAID: "success",
@@ -27,9 +28,9 @@ const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "ou
 export default async function PayrollDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; q?: string }>;
 }) {
-  const { month: monthParam, year: yearParam } = await searchParams;
+  const { month: monthParam, year: yearParam, q } = await searchParams;
   const now = new Date();
   const month = Number(monthParam) || now.getMonth() + 1;
   const year = Number(yearParam) || now.getFullYear();
@@ -38,19 +39,19 @@ export default async function PayrollDashboardPage({
   const periodStart = startOfMonth(new Date(year, month - 1, 1));
   const periodEnd = endOfMonth(new Date(year, month - 1, 1));
 
-  const [teachers, payrolls, advanceAgg] = await Promise.all([
+  const [teachers, totalTeachers, payrolls, advanceAgg] = await Promise.all([
     prisma.teacher.findMany({
+      where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
       orderBy: { createdAt: "desc" },
       include: { payrolls: { where: { month, year, deletedAt: null }, take: 1 } },
     }),
+    prisma.teacher.count(),
     prisma.payroll.findMany({ where: { month, year, deletedAt: null } }),
     prisma.advancePayment.aggregate({
       where: { date: { gte: periodStart, lte: periodEnd }, deletedAt: null },
       _sum: { amount: true },
     }),
   ]);
-
-  const totalTeachers = teachers.length;
   const salaryThisMonth = payrolls.reduce((s, p) => s + p.netPayable, 0);
   const paid = payrolls.reduce((s, p) => s + p.paidAmount, 0);
   const pending = payrolls.reduce((s, p) => s + p.pendingAmount, 0);
@@ -79,6 +80,7 @@ export default async function PayrollDashboardPage({
       <PageHeader title="Payroll" description="Monthly payroll generation, review and settlement for every teacher" />
 
       <form className="mb-4 flex flex-wrap items-end gap-3" action="/payroll">
+        {q && <input type="hidden" name="q" value={q} />}
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Month</label>
           <NativeSelect name="month" defaultValue={month} className="w-36">
@@ -98,6 +100,8 @@ export default async function PayrollDashboardPage({
         <Button type="submit" variant="outline">Go</Button>
       </form>
 
+      <StaffSearchFilter placeholder="Search by name..." />
+
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {cards.map((c) => (
           <Card key={c.label} size="sm">
@@ -112,7 +116,9 @@ export default async function PayrollDashboardPage({
       <Card>
         <CardContent>
           {teachers.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No staff members added yet.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {q ? "No staff members match your search." : "No staff members added yet."}
+            </p>
           ) : (
             <>
               <div className="space-y-3 md:hidden">

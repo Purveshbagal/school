@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarksSummaryTable } from "@/components/marks-summary-table";
 import { MarksForm } from "./marks-form";
+import { DownloadResultPanel } from "./download-result-panel";
 
 export default async function StudentMarksEntryPage({
   params,
@@ -61,12 +62,45 @@ export default async function StudentMarksEntryPage({
   const totalMax = summaryRows.reduce((sum, r) => sum + r.totalMarks, 0);
   const percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
 
+  const [markedExams, settings] = await Promise.all([
+    prisma.marks.findMany({
+      where: { studentId },
+      distinct: ["examId"],
+      select: { exam: { select: { id: true, name: true, academicYear: true, isFinal: true } } },
+    }),
+    prisma.schoolSettings.findUnique({ where: { id: "main" } }),
+  ]);
+  const examsByYear = new Map<string, { id: string; name: string }[]>();
+  for (const { exam } of markedExams) {
+    if (exam.isFinal) continue;
+    const year = exam.academicYear || "Unknown";
+    const list = examsByYear.get(year) || [];
+    list.push({ id: exam.id, name: exam.name });
+    examsByYear.set(year, list);
+  }
+  const downloadYears = Array.from(examsByYear.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([year, exams]) => ({ year, exams }));
+
   return (
     <div>
       <PageHeader
         title={`Marks — ${student.name}`}
         description={`${student.standard.name} · Admission No. ${student.admissionNo}`}
       />
+
+      {downloadYears.length > 0 && (
+        <div className="mb-6">
+          <DownloadResultPanel
+            studentId={studentId}
+            studentName={student.name}
+            years={downloadYears}
+            schoolName={settings?.name || "School"}
+            address={settings?.address || null}
+            phone={settings?.phone || null}
+          />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

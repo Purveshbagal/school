@@ -23,6 +23,7 @@ import {
   getLedgerReport,
 } from "@/lib/payroll-reports";
 import { Download } from "lucide-react";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
 const TABS = [
   { value: "monthly", label: "Monthly Salary" },
@@ -45,9 +46,9 @@ const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "ou
 export default async function PayrollReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; month?: string; year?: string }>;
+  searchParams: Promise<{ tab?: string; month?: string; year?: string; q?: string }>;
 }) {
-  const { tab: tabParam, month: monthParam, year: yearParam } = await searchParams;
+  const { tab: tabParam, month: monthParam, year: yearParam, q } = await searchParams;
   const tab = TABS.some((t) => t.value === tabParam) ? tabParam! : "monthly";
   const now = new Date();
   const month = Number(monthParam) || now.getMonth() + 1;
@@ -99,22 +100,28 @@ export default async function PayrollReportsPage({
         </div>
       </div>
 
+      <StaffSearchFilter placeholder="Search by teacher name..." />
+
       <Card>
         <CardContent>
-          {tab === "monthly" && <MonthlyReport month={month} year={year} />}
-          {tab === "teacher-wise" && <TeacherWiseReport />}
-          {tab === "advance" && <AdvanceReport />}
-          {tab === "pending" && <PendingReport />}
-          {tab === "payments" && <PaymentsReport />}
-          {tab === "ledger" && <LedgerReport />}
+          {tab === "monthly" && <MonthlyReport month={month} year={year} q={q} />}
+          {tab === "teacher-wise" && <TeacherWiseReport q={q} />}
+          {tab === "advance" && <AdvanceReport q={q} />}
+          {tab === "pending" && <PendingReport q={q} />}
+          {tab === "payments" && <PaymentsReport q={q} />}
+          {tab === "ledger" && <LedgerReport q={q} />}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-async function MonthlyReport({ month, year }: { month: number; year: number }) {
-  const rows = await getMonthlySalaryReport(month, year);
+function matchesQuery(name: string, q?: string) {
+  return !q || name.toLowerCase().includes(q.toLowerCase());
+}
+
+async function MonthlyReport({ month, year, q }: { month: number; year: number; q?: string }) {
+  const rows = (await getMonthlySalaryReport(month, year)).filter((p) => matchesQuery(p.teacher.name, q));
   if (rows.length === 0) return <Empty text={`No payroll generated for ${MONTH_NAMES[month - 1]} ${year}.`} />;
   return (
     <Table>
@@ -146,9 +153,9 @@ async function MonthlyReport({ month, year }: { month: number; year: number }) {
   );
 }
 
-async function TeacherWiseReport() {
-  const rows = await getTeacherWiseReport();
-  if (rows.length === 0) return <Empty text="No staff members added yet." />;
+async function TeacherWiseReport({ q }: { q?: string }) {
+  const rows = (await getTeacherWiseReport()).filter((r) => matchesQuery(r.teacher.name, q));
+  if (rows.length === 0) return <Empty text={q ? "No staff members match your search." : "No staff members added yet."} />;
   return (
     <Table>
       <TableHeader>
@@ -175,9 +182,9 @@ async function TeacherWiseReport() {
   );
 }
 
-async function AdvanceReport() {
-  const rows = await getAdvanceReport();
-  if (rows.length === 0) return <Empty text="No advances recorded yet." />;
+async function AdvanceReport({ q }: { q?: string }) {
+  const rows = (await getAdvanceReport()).filter((a) => matchesQuery(a.teacher.name, q));
+  if (rows.length === 0) return <Empty text={q ? "No advances match your search." : "No advances recorded yet."} />;
   return (
     <Table>
       <TableHeader>
@@ -206,9 +213,9 @@ async function AdvanceReport() {
   );
 }
 
-async function PendingReport() {
-  const rows = await getPendingSalaryReport();
-  if (rows.length === 0) return <Empty text="No pending salary — everything is settled." />;
+async function PendingReport({ q }: { q?: string }) {
+  const rows = (await getPendingSalaryReport()).filter((p) => matchesQuery(p.teacher.name, q));
+  if (rows.length === 0) return <Empty text={q ? "No pending salary rows match your search." : "No pending salary — everything is settled."} />;
   return (
     <Table>
       <TableHeader>
@@ -235,9 +242,9 @@ async function PendingReport() {
   );
 }
 
-async function PaymentsReport() {
-  const rows = await getPaymentHistoryReport();
-  if (rows.length === 0) return <Empty text="No payments recorded yet." />;
+async function PaymentsReport({ q }: { q?: string }) {
+  const rows = (await getPaymentHistoryReport()).filter((p) => matchesQuery(p.teacher.name, q));
+  if (rows.length === 0) return <Empty text={q ? "No payments match your search." : "No payments recorded yet."} />;
   return (
     <Table>
       <TableHeader>
@@ -264,9 +271,9 @@ async function PaymentsReport() {
   );
 }
 
-async function LedgerReport() {
-  const rows = await getLedgerReport();
-  if (rows.length === 0) return <Empty text="No ledger activity yet." />;
+async function LedgerReport({ q }: { q?: string }) {
+  const rows = (await getLedgerReport()).filter((l) => matchesQuery(l.teacher.name, q));
+  if (rows.length === 0) return <Empty text={q ? "No ledger entries match your search." : "No ledger activity yet."} />;
   return (
     <Table>
       <TableHeader>

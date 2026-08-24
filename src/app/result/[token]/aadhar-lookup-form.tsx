@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/document-header";
 import { PrintDownloadActions } from "@/components/print-download-actions";
+import { MobileScaleWrapper } from "@/components/mobile-scale-wrapper";
 import { ResultCard } from "./result-card";
 import { lookupResultAction, type ResultLookupResult } from "@/app/actions/marks";
 
@@ -42,22 +43,24 @@ export function AadharLookupForm({
           <PrintDownloadActions targetId="exam-result-card" fileName={`Result-${result.studentName}`} />
         </div>
 
-        <ResultCard
-          schoolName={schoolName}
-          address={address}
-          phone={phone}
-          studentName={result.studentName}
-          motherName={result.motherName}
-          standardName={result.standardName}
-          examName={result.examName}
-          resultDate={result.resultDate}
-          rows={result.rows}
-          totalObtained={result.totalObtained}
-          totalMax={result.totalMax}
-          percentage={result.percentage}
-          rank={result.rank}
-          totalStudents={result.totalStudents}
-        />
+        <MobileScaleWrapper desktopWidth={640}>
+          <ResultCard
+            schoolName={schoolName}
+            address={address}
+            phone={phone}
+            studentName={result.studentName}
+            motherName={result.motherName}
+            standardName={result.standardName}
+            examName={result.examName}
+            resultDate={result.resultDate}
+            rows={result.rows}
+            totalObtained={result.totalObtained}
+            totalMax={result.totalMax}
+            percentage={result.percentage}
+            rank={result.rank}
+            totalStudents={result.totalStudents}
+          />
+        </MobileScaleWrapper>
 
         <Button
           variant="outline"

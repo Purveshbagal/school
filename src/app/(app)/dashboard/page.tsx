@@ -140,6 +140,24 @@ export default async function DashboardPage() {
       border: "border-t-success",
       href: "/fees-overview",
     },
+    {
+      label: "Total Collection",
+      value: formatCurrency(feesOverview.totalCollected),
+      sub: "Fees collected so far",
+      icon: IndianRupee,
+      tone: "text-primary bg-primary/10",
+      border: "border-t-primary",
+      href: "/payments",
+    },
+    {
+      label: "Pending Fees",
+      value: formatCurrency(feesOverview.totalPending),
+      sub: "Fees yet to be collected",
+      icon: AlertCircle,
+      tone: "text-destructive bg-destructive/10",
+      border: "border-t-destructive",
+      href: "/pending-fees",
+    },
   ];
 
   const secondaryStats = [

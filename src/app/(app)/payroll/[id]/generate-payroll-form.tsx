@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,18 +38,15 @@ export function GeneratePayrollForm({
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(generatePayrollAction, undefined);
-  const [showDone, setShowDone] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const showDone = !!state?.success && !dismissed;
   const canGenerate = hasStructure && hasAttendance;
 
-  useEffect(() => {
-    if (state?.success) {
-      setShowDone(true);
-    }
-  }, [state]);
-
   function handleDoneClose(open: boolean) {
-    setShowDone(open);
-    if (!open) router.refresh();
+    if (!open) {
+      setDismissed(true);
+      router.refresh();
+    }
   }
 
   return (

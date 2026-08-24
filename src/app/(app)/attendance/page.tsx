@@ -15,18 +15,20 @@ import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { MONTH_NAMES } from "@/lib/payroll-engine";
 import { CalendarCheck } from "lucide-react";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; q?: string }>;
 }) {
-  const { month: monthParam, year: yearParam } = await searchParams;
+  const { month: monthParam, year: yearParam, q } = await searchParams;
   const now = new Date();
   const month = Number(monthParam) || now.getMonth() + 1;
   const year = Number(yearParam) || now.getFullYear();
 
   const teachers = await prisma.teacher.findMany({
+    where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
     orderBy: { createdAt: "desc" },
     include: {
       attendanceSummaries: { where: { month, year, deletedAt: null }, take: 1 },
@@ -45,6 +47,7 @@ export default async function AttendancePage({
       <Card>
         <CardContent>
           <form className="mb-4 flex flex-wrap items-end gap-3" action="/attendance">
+            {q && <input type="hidden" name="q" value={q} />}
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Month</label>
               <NativeSelect name="month" defaultValue={month} className="w-36">
@@ -64,8 +67,12 @@ export default async function AttendancePage({
             <Button type="submit" variant="outline">Go</Button>
           </form>
 
+          <StaffSearchFilter placeholder="Search by name..." />
+
           {teachers.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No staff members added yet.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {q ? "No staff members match your search." : "No staff members added yet."}
+            </p>
           ) : (
             <>
               <div className="space-y-3 md:hidden">

@@ -16,6 +16,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { formatCurrency } from "@/lib/utils";
 import { deleteTeacherAction } from "@/app/actions/teachers";
 import { UserPlus } from "lucide-react";
+import { StaffSearchFilter } from "@/components/staff-search-filter";
 
 function deleteConfirmMessage(name: string, hasPayrollHistory: boolean) {
   if (hasPayrollHistory) {
@@ -24,8 +25,22 @@ function deleteConfirmMessage(name: string, hasPayrollHistory: boolean) {
   return `Delete ${name}? This will also delete all their advances and salary slips. This cannot be undone.`;
 }
 
-export default async function TeachersPage() {
+export default async function TeachersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const teachers = await prisma.teacher.findMany({
+    where: q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { employeeNo: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
     orderBy: { createdAt: "desc" },
     include: {
       salaryStructures: { where: { status: "ACTIVE", deletedAt: null }, orderBy: { effectiveFrom: "desc" }, take: 1 },
@@ -70,11 +85,13 @@ export default async function TeachersPage() {
         }
       />
 
+      <StaffSearchFilter placeholder="Search by name, employee number, phone..." />
+
       <Card>
         <CardContent>
           {teachers.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              No teachers added yet.
+              {q ? "No teachers match your search." : "No teachers added yet."}
             </p>
           ) : (
             <>

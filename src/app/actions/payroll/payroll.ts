@@ -106,9 +106,8 @@ export async function generatePayrollAction(
   const session = await getSession();
   const invoiceNo = await nextPayrollInvoiceNo();
 
-  let payroll;
   try {
-    payroll = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       const created = await tx.payroll.create({
         data: {
           teacherId,

@@ -640,6 +640,11 @@ model Exam {
   /// whose public link shows a student's combined result across every real exam/term
   /// instead of marks entered against it directly — it never holds marks of its own.
   isFinal          Boolean   @default(false)
+  /// Academic year the exam was created in (e.g. "2026-27"), stamped from
+  /// SchoolSettings.academicYear at creation time. Nullable because exams created
+  /// before this field existed have no recorded year. Lets a student's result be
+  /// downloaded for a specific past year even after they've been promoted.
+  academicYear     String?
   marks            Marks[]
   createdAt        DateTime  @default(now())
 }

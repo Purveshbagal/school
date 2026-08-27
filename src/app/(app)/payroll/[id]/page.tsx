@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getActiveSalaryStructure, getOutstandingAdvanceTotal, getPreviousPending, getNextPayrollPeriod } from "@/lib/payroll-data";
+import { getPayrollPreview, getOutstandingAdvanceTotal, getOutstandingAdvanceAsOfPeriod, getNextPayrollPeriod } from "@/lib/payroll-data";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { deleteBonusAction } from "@/app/actions/payroll/bonuses";
 import { deleteDeductionAction } from "@/app/actions/payroll/deductions";
 import { deleteSalaryPaymentAction } from "@/app/actions/payroll/salary-payments";
 import { DeleteButton } from "@/components/delete-button";
+import { PayrollRow, PayrollLine } from "@/components/payroll-breakdown";
 import { ArrowLeft, FileText, Printer } from "lucide-react";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "outline"> = {
@@ -58,11 +59,9 @@ export default async function TeacherPayrollPage({
     },
   });
 
-  const [structure, attendance, outstandingAdvance, previousPending] = await Promise.all([
-    getActiveSalaryStructure(id),
-    prisma.attendanceSummary.findUnique({ where: { teacherId_month_year: { teacherId: id, month, year } } }),
-    getOutstandingAdvanceTotal(id),
-    getPreviousPending(id, month, year),
+  const [preview, outstandingAdvance] = await Promise.all([
+    payroll ? null : getPayrollPreview(id, month, year),
+    payroll ? getOutstandingAdvanceAsOfPeriod(id, payroll.month, payroll.year) : getOutstandingAdvanceTotal(id),
   ]);
 
   return (
@@ -102,11 +101,8 @@ export default async function TeacherPayrollPage({
           teacherId={id}
           month={month}
           year={year}
-          hasStructure={Boolean(structure)}
-          hasAttendance={Boolean(attendance)}
-          monthlySalary={structure?.monthlySalary || 0}
+          preview={preview!}
           outstandingAdvance={outstandingAdvance}
-          previousPending={previousPending}
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
@@ -127,32 +123,38 @@ export default async function TeacherPayrollPage({
               </CardHeader>
               <CardContent>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-                  <Row label="Working Days" value={payroll.workingDays} />
-                  <Row label="Present Days" value={payroll.presentDays} />
-                  <Row label="Absent Days" value={payroll.absentDays} />
-                  <Row label="Half Days" value={payroll.halfDays} />
-                  <Row label="Paid Leave" value={payroll.paidLeaveDays} />
-                  <Row label="Unpaid Leave" value={payroll.unpaidLeaveDays} />
+                  <PayrollRow label="Working Days" value={payroll.workingDays} />
+                  <PayrollRow label="Present Days" value={payroll.presentDays} />
+                  <PayrollRow label="Absent Days" value={payroll.absentDays} />
+                  <PayrollRow label="Half Days" value={payroll.halfDays} />
+                  <PayrollRow label="Paid Leave" value={payroll.paidLeaveDays} />
+                  <PayrollRow label="Unpaid Leave" value={payroll.unpaidLeaveDays} />
                 </dl>
 
                 <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-                  <Line label="Gross Salary" value={payroll.grossSalary} />
-                  <Line label="Leave Deduction" value={-payroll.leaveDeduction} />
-                  <Line label="Half Day Deduction" value={-payroll.halfDayDeduction} />
-                  <Line label="Late Deduction" value={-payroll.lateDeduction} />
-                  <Line label="Other Deductions" value={-payroll.otherDeductionsTotal} />
-                  <Line label="Bonus" value={payroll.bonusTotal} />
-                  <Line label="Advance Applied" value={-payroll.advanceApplied} />
-                  <Line label="Previous Pending" value={payroll.previousPending} />
+                  <PayrollLine label="Gross Salary" value={payroll.grossSalary} />
+                  <PayrollLine label="Leave Deduction" value={-payroll.leaveDeduction} />
+                  <PayrollLine label="Half Day Deduction" value={-payroll.halfDayDeduction} />
+                  <PayrollLine label="Late Deduction" value={-payroll.lateDeduction} />
+                  <PayrollLine label="Other Deductions" value={-payroll.otherDeductionsTotal} />
+                  <PayrollLine label="Bonus" value={payroll.bonusTotal} />
+                  <PayrollLine label="Advance Applied" value={-payroll.advanceApplied} />
+                  <PayrollLine label="Previous Pending" value={payroll.previousPending} />
                   <div className="flex items-center justify-between border-t border-border pt-2 font-semibold">
                     <span>Net Payable</span>
                     <span>{formatCurrency(payroll.netPayable)}</span>
                   </div>
-                  <Line label="Paid" value={payroll.paidAmount} />
+                  <PayrollLine label="Paid" value={payroll.paidAmount} />
                   <div className="flex items-center justify-between font-semibold text-destructive">
                     <span>Pending</span>
                     <span>{formatCurrency(payroll.pendingAmount)}</span>
                   </div>
+                  {outstandingAdvance > 0 && (
+                    <div className="flex items-center justify-between border-t border-border pt-2 text-muted-foreground">
+                      <span>Advance Remaining (outstanding)</span>
+                      <span className="font-medium text-foreground">{formatCurrency(outstandingAdvance)}</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -277,20 +279,3 @@ export default async function TeacherPayrollPage({
   );
 }
 
-function Row({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{value}</dd>
-    </div>
-  );
-}
-
-function Line({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between text-muted-foreground">
-      <span>{label}</span>
-      <span className={value < 0 ? "text-destructive" : value > 0 ? "text-foreground" : ""}>{formatCurrency(value)}</span>
-    </div>
-  );
-}

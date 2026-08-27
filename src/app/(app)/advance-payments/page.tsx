@@ -18,7 +18,7 @@ import { resolveDateRange, RANGE_OPTIONS } from "@/lib/date-ranges";
 import { AdvancePaymentsDateFilter } from "./advance-payments-date-filter";
 import { AdvancePaymentsViewTabs } from "./advance-payments-view-tabs";
 import { deleteAdvanceAction } from "@/app/actions/payroll/advance-payments";
-import { Send, Pencil } from "lucide-react";
+import { Send, Pencil, CalendarClock } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
 import { StaffSearchFilter } from "@/components/staff-search-filter";
 
@@ -112,16 +112,20 @@ export default async function AdvancePaymentsPage({
                         </Badge>
                         {p.note && <p className="truncate text-xs text-muted-foreground">{p.note}</p>}
                       </div>
-                      {p.status === "UNADJUSTED" && (
-                        <div className="mt-2 flex justify-end gap-1">
-                          <Button variant="ghost" size="icon-sm" render={<Link href={`/advance-payments/entries/${p.id}/edit`}><Pencil /></Link>} />
-                          <DeleteButton
-                            action={deleteAdvanceAction}
-                            hiddenFields={{ id: p.id, teacherId: p.teacherId }}
-                            confirmMessage={`Delete this advance of ${formatCurrency(p.amount)}? This cannot be undone.`}
-                          />
-                        </div>
-                      )}
+                      <div className="mt-2 flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title="View EMI schedule — how much gets cut in which month"
+                          render={<Link href={`/advance-payments/entries/${p.id}/schedule`}><CalendarClock /></Link>}
+                        />
+                        <Button variant="ghost" size="icon-sm" render={<Link href={`/advance-payments/entries/${p.id}/edit`}><Pencil /></Link>} />
+                        <DeleteButton
+                          action={deleteAdvanceAction}
+                          hiddenFields={{ id: p.id, teacherId: p.teacherId }}
+                          confirmMessage={`Delete this advance of ${formatCurrency(p.amount)}? This cannot be undone.`}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -154,16 +158,20 @@ export default async function AdvancePaymentsPage({
                         </TableCell>
                         <TableCell className="text-muted-foreground">{p.note || "-"}</TableCell>
                         <TableCell className="text-right">
-                          {p.status === "UNADJUSTED" && (
-                            <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon-sm" render={<Link href={`/advance-payments/entries/${p.id}/edit`}><Pencil /></Link>} />
-                              <DeleteButton
-                                action={deleteAdvanceAction}
-                                hiddenFields={{ id: p.id, teacherId: p.teacherId }}
-                                confirmMessage={`Delete this advance of ${formatCurrency(p.amount)}? This cannot be undone.`}
-                              />
-                            </div>
-                          )}
+                          <div className="flex justify-end gap-1">
+                            <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title="View EMI schedule — how much gets cut in which month"
+                          render={<Link href={`/advance-payments/entries/${p.id}/schedule`}><CalendarClock /></Link>}
+                        />
+                            <Button variant="ghost" size="icon-sm" render={<Link href={`/advance-payments/entries/${p.id}/edit`}><Pencil /></Link>} />
+                            <DeleteButton
+                              action={deleteAdvanceAction}
+                              hiddenFields={{ id: p.id, teacherId: p.teacherId }}
+                              confirmMessage={`Delete this advance of ${formatCurrency(p.amount)}? This cannot be undone.`}
+                            />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

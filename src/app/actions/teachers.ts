@@ -106,6 +106,8 @@ export async function deleteTeacherAction(formData: FormData): Promise<void> {
     prisma.salaryPayment.deleteMany({ where: { teacherId: id } }),
     // Payroll's Bonus/SalaryDeduction rows cascade automatically (onDelete: Cascade).
     prisma.payroll.deleteMany({ where: { teacherId: id } }),
+    // AdvanceInstallment references AdvancePayment without cascade, so it must go first.
+    prisma.advanceInstallment.deleteMany({ where: { teacherId: id } }),
     prisma.advancePayment.deleteMany({ where: { teacherId: id } }),
     prisma.attendanceSummary.deleteMany({ where: { teacherId: id } }),
     prisma.salaryRevision.deleteMany({ where: { teacherId: id } }),

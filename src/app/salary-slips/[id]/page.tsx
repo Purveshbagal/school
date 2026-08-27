@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getOutstandingAdvanceTotal } from "@/lib/payroll-data";
+import { getOutstandingAdvanceAsOfPeriod } from "@/lib/payroll-data";
 import { formatNumber, amountToWords } from "@/lib/utils";
 import { MONTH_NAMES } from "@/lib/payroll-engine";
 import { PrintDownloadActions } from "@/components/print-download-actions";
@@ -33,7 +33,7 @@ export default async function SalarySlipPage({
     prisma.advancePayment
       .findMany({ where: { teacherId: payroll.teacherId, deletedAt: null, date: { gte: monthStart, lte: monthEnd } } })
       .then((rows) => rows.reduce((sum, a) => sum + a.amount, 0)),
-    getOutstandingAdvanceTotal(payroll.teacherId),
+    getOutstandingAdvanceAsOfPeriod(payroll.teacherId, payroll.month, payroll.year),
   ]);
 
   // Absence and Leave share one combined deduction bucket, computed at an identical per-day
@@ -184,7 +184,7 @@ export default async function SalarySlipPage({
             </tr>
             <tr>
               <td className="border border-slate-900 bg-green-200 p-2 font-semibold" colSpan={2}>
-                Advance Remening Rs. {formatNumber(advanceRemaining)}
+                Advance Remaining Rs. {formatNumber(advanceRemaining)}
               </td>
               <td className="border border-slate-900 bg-amber-100 p-2 font-semibold">Sub Total</td>
               <td className="border border-slate-900 bg-amber-100 p-2 text-right font-semibold">{formatNumber(subTotal)}</td>

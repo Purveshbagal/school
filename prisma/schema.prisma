@@ -167,6 +167,7 @@ model Teacher {
   salaryStructures    SalaryStructure[]
   salaryRevisions     SalaryRevision[]
   advancePayments     AdvancePayment[]
+  advanceInstallments AdvanceInstallment[]
   attendanceSummaries AttendanceSummary[]
   payrolls            Payroll[]
   salaryPayments      SalaryPayment[]
@@ -438,6 +439,7 @@ model AdvancePayment {
   note           String?
   status         String    @default("UNADJUSTED") // UNADJUSTED | PARTIALLY_ADJUSTED | ADJUSTED
   adjustedAmount Float     @default(0)
+  installments   AdvanceInstallment[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   createdBy      String?
@@ -445,6 +447,32 @@ model AdvancePayment {
   deletedAt      DateTime?
 
   @@map("advance_payments")
+}
+
+/// One scheduled month of an AdvancePayment's EMI repayment. `generatePayrollAction`
+/// deducts only the due month's row (capped at that month's net payable) instead of
+/// consuming the whole advance at once. `amount` is the fixed scheduled EMI; `appliedAmount`
+/// tracks how much of it has actually been deducted so far (may be less than `amount` if capped).
+model AdvanceInstallment {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  advancePaymentId String    @db.ObjectId
+  advancePayment   AdvancePayment @relation(fields: [advancePaymentId], references: [id])
+  teacherId        String    @db.ObjectId
+  teacher          Teacher   @relation(fields: [teacherId], references: [id])
+  month            Int
+  year             Int
+  amount           Float
+  appliedAmount    Float     @default(0)
+  status           String    @default("PENDING") // PENDING | DEDUCTED
+  payrollId        String?   @db.ObjectId
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdBy        String?
+  updatedBy        String?
+  deletedAt        DateTime?
+
+  @@index([teacherId, month, year])
+  @@map("advance_installments")
 }
 
 /// One row per teacher per month — manually entered totals until a daily attendance

@@ -1,105 +1,111 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { generatePayrollAction } from "@/app/actions/payroll/payroll";
 import { formatCurrency } from "@/lib/utils";
-import { AlertCircle, CheckCircle2, CircleDollarSign } from "lucide-react";
+import { PayrollRow, PayrollLine } from "@/components/payroll-breakdown";
+import type { getPayrollPreview } from "@/lib/payroll-data";
+import { AlertCircle, CircleDollarSign } from "lucide-react";
+
+type Preview = Awaited<ReturnType<typeof getPayrollPreview>>;
 
 export function GeneratePayrollForm({
   teacherId,
   month,
   year,
-  hasStructure,
-  hasAttendance,
-  monthlySalary,
+  preview,
   outstandingAdvance,
-  previousPending,
 }: {
   teacherId: string;
   month: number;
   year: number;
-  hasStructure: boolean;
-  hasAttendance: boolean;
-  monthlySalary: number;
+  preview: Preview;
   outstandingAdvance: number;
-  previousPending: number;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(generatePayrollAction, undefined);
-  const [dismissed, setDismissed] = useState(false);
-  const showDone = !!state?.success && !dismissed;
-  const canGenerate = hasStructure && hasAttendance;
 
-  function handleDoneClose(open: boolean) {
-    if (!open) {
-      setDismissed(true);
-      router.refresh();
-    }
+  useEffect(() => {
+    if (state?.success) router.refresh();
+  }, [state?.success, router]);
+
+  if (!preview.ok) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Salary not yet generated for this period</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!preview.hasStructure && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No active salary structure. <Link href={`/salary-structure/${teacherId}/revise`} className="underline">Assign one first</Link>.
+              </AlertDescription>
+            </Alert>
+          )}
+          {!preview.hasAttendance && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No attendance summary for {month}/{year}.{" "}
+                <Link href={`/attendance/${teacherId}?month=${month}&year=${year}`} className="underline">Enter attendance first</Link>.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    );
   }
 
+  const { result } = preview;
+
   return (
-    <Card>
-      <Dialog open={showDone} onOpenChange={handleDoneClose}>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-success" /> Done
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">Payroll generated successfully.</p>
-          <DialogFooter>
-            <Button onClick={() => handleDoneClose(false)}>OK</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <CardHeader>
-        <CardTitle>Salary not yet generated for this period</CardTitle>
+    <Card className="border-t-2 border-t-primary">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <CircleDollarSign className="h-4 w-4" /> Preview
+        </CardTitle>
+        <Badge variant="outline">Not yet generated</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!hasStructure && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              No active salary structure. <Link href={`/salary-structure/${teacherId}/revise`} className="underline">Assign one first</Link>.
-            </AlertDescription>
-          </Alert>
-        )}
-        {!hasAttendance && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              No attendance summary for {month}/{year}.{" "}
-              <Link href={`/attendance/${teacherId}?month=${month}&year=${year}`} className="underline">Enter attendance first</Link>.
-            </AlertDescription>
-          </Alert>
-        )}
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+          <PayrollRow label="Working Days" value={preview.workingDays} />
+          <PayrollRow label="Present Days" value={preview.presentDays} />
+          <PayrollRow label="Absent Days" value={preview.absentDays} />
+          <PayrollRow label="Half Days" value={preview.halfDays} />
+          <PayrollRow label="Paid Leave" value={preview.paidLeaveDays} />
+          <PayrollRow label="Unpaid Leave" value={preview.unpaidLeaveDays} />
+        </dl>
 
-        {canGenerate && (
-          <div className="rounded-lg bg-muted px-4 py-3 text-sm">
-            <p>Monthly Salary: <span className="font-semibold">{formatCurrency(monthlySalary)}</span></p>
-            {outstandingAdvance > 0 && (
-              <p>Outstanding Advance to Apply: <span className="font-semibold">{formatCurrency(outstandingAdvance)}</span></p>
-            )}
-            {previousPending > 0 && (
-              <p>Previous Month Pending (carried forward): <span className="font-semibold">{formatCurrency(previousPending)}</span></p>
-            )}
-            <p className="mt-1 text-xs text-muted-foreground">
-              Deductions are computed automatically from the saved attendance summary and current salary settings.
-            </p>
+        <div className="space-y-2 border-t border-border pt-4 text-sm">
+          <PayrollLine label="Gross Salary" value={result.grossSalary} />
+          <PayrollLine label="Leave Deduction" value={-result.leaveDeduction} />
+          <PayrollLine label="Half Day Deduction" value={-result.halfDayDeduction} />
+          <PayrollLine label="Late Deduction" value={-result.lateDeduction} />
+          <PayrollLine label="Other Deductions" value={-result.otherDeductionsTotal} />
+          <PayrollLine label="Advance Applied" value={-preview.advanceApplied} />
+          <PayrollLine label="Previous Pending" value={preview.previousPending} />
+          <div className="flex items-center justify-between border-t border-border pt-2 font-semibold">
+            <span>Net Payable</span>
+            <span>{formatCurrency(result.netPayable)}</span>
           </div>
+        </div>
+
+        {outstandingAdvance > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Outstanding advance on file: <span className="font-medium">{formatCurrency(outstandingAdvance)}</span>
+          </p>
         )}
+        <p className="text-xs text-muted-foreground">
+          This is a live preview computed from the saved attendance summary and current salary settings — nothing is saved yet.
+        </p>
 
         <form action={formAction}>
           <input type="hidden" name="teacherId" value={teacherId} />
@@ -110,8 +116,8 @@ export function GeneratePayrollForm({
             <div className="mb-4 rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">{state.error}</div>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={pending || !canGenerate}>
-            <CircleDollarSign /> {pending ? "Generating..." : "Generate Payroll"}
+          <Button type="submit" size="lg" className="w-full" disabled={pending}>
+            <CircleDollarSign /> {pending ? "Generating..." : "Confirm & Generate Payroll"}
           </Button>
         </form>
       </CardContent>

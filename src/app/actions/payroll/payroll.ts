@@ -1,16 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeLedgerEntry } from "@/lib/ledger";
-import { createNotification } from "@/lib/notify";
-import { nextPayrollInvoiceNo } from "@/lib/ids";
-import { calcPayroll, type CalculationType } from "@/lib/payroll-engine";
-import { getActiveSalaryStructure, getPreviousPending } from "@/lib/payroll-data";
-import { getSalarySettings } from "@/lib/salary-settings";
-import { formatCurrency } from "@/lib/utils";
+import { generatePayrollForPeriod } from "@/lib/payroll-generate";
+import { refundInstallmentsForPayroll } from "@/lib/advance-installments";
 
 export async function generatePayrollAction(
   _prevState: { error?: string; success?: boolean } | undefined,
@@ -24,169 +19,9 @@ export async function generatePayrollAction(
     return { error: "Please select a teacher, month and year" };
   }
 
-  const teacher = await prisma.teacher.findUnique({ where: { id: teacherId } });
-  if (!teacher) return { error: "Teacher not found" };
-
-  const existing = await prisma.payroll.findUnique({
-    where: { teacherId_month_year: { teacherId, month, year } },
-  });
-  if (existing && !existing.deletedAt) {
-    return { error: `Salary for this period has already been generated (${existing.invoiceNo}).` };
-  }
-
-  const structure = await getActiveSalaryStructure(teacherId);
-  if (!structure) {
-    return { error: "This teacher has no active salary structure. Assign one first." };
-  }
-
-  const attendance = await prisma.attendanceSummary.findUnique({
-    where: { teacherId_month_year: { teacherId, month, year } },
-  });
-  if (!attendance) {
-    return { error: "No attendance summary saved for this period. Save attendance first." };
-  }
-
-  const settings = await getSalarySettings();
-  const previousPending = await getPreviousPending(teacherId, month, year);
-
-  const outstandingAdvances = await prisma.advancePayment.findMany({
-    where: { teacherId, deletedAt: null, status: { in: ["UNADJUSTED", "PARTIALLY_ADJUSTED"] } },
-    orderBy: { date: "asc" },
-  });
-  const outstandingAdvanceTotal = outstandingAdvances.reduce((sum, a) => sum + (a.amount - a.adjustedAmount), 0);
-
-  const attendanceInput = {
-    workingDays: attendance.workingDays,
-    absentDays: attendance.absentDays,
-    halfDays: attendance.halfDays,
-    unpaidLeaveDays: attendance.unpaidLeaveDays,
-    lateCount: attendance.lateCount,
-  };
-  const settingsInput = {
-    workingDaysPerMonth: settings.workingDaysPerMonth,
-    halfDayDeductionRule: settings.halfDayDeductionRule,
-    absentDeductionRule: settings.absentDeductionRule,
-    lateRuleThreshold: settings.lateRuleThreshold,
-    lateDeductionPerOccurrence: settings.lateDeductionPerOccurrence,
-    roundOff: settings.roundOff,
-    pfEnabled: settings.pfEnabled,
-    pfRate: settings.pfRate,
-    esicEnabled: settings.esicEnabled,
-    esicRate: settings.esicRate,
-    professionalTaxEnabled: settings.professionalTaxEnabled,
-    professionalTaxAmount: settings.professionalTaxAmount,
-  };
-
-  // Figure out how much advance to actually apply: never more than what's owed before advance.
-  const preAdvance = calcPayroll({
-    monthlySalary: structure.monthlySalary,
-    calculationType: structure.calculationType as CalculationType,
-    attendance: attendanceInput,
-    settings: settingsInput,
-    manualDeductionsTotal: 0,
-    bonusTotal: 0,
-    advanceApplied: 0,
-    previousPending,
-    paidAmount: 0,
-  });
-  const advanceApplied = Math.min(outstandingAdvanceTotal, preAdvance.netPayable);
-
-  const result = calcPayroll({
-    monthlySalary: structure.monthlySalary,
-    calculationType: structure.calculationType as CalculationType,
-    attendance: attendanceInput,
-    settings: settingsInput,
-    manualDeductionsTotal: 0,
-    bonusTotal: 0,
-    advanceApplied,
-    previousPending,
-    paidAmount: 0,
-  });
-
   const session = await getSession();
-  const invoiceNo = await nextPayrollInvoiceNo();
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      const created = await tx.payroll.create({
-        data: {
-          teacherId,
-          month,
-          year,
-          invoiceNo,
-          salaryStructureId: structure.id,
-          workingDays: attendance.workingDays,
-          presentDays: Math.max(
-            0,
-            attendance.workingDays - attendance.absentDays - attendance.halfDays - attendance.paidLeaveDays - attendance.unpaidLeaveDays
-          ),
-          absentDays: attendance.absentDays,
-          halfDays: attendance.halfDays,
-          paidLeaveDays: attendance.paidLeaveDays,
-          unpaidLeaveDays: attendance.unpaidLeaveDays,
-          lateCount: attendance.lateCount,
-          grossSalary: result.grossSalary,
-          leaveDeduction: result.leaveDeduction,
-          halfDayDeduction: result.halfDayDeduction,
-          lateDeduction: result.lateDeduction,
-          statutoryDeductionsTotal: result.pfAmount + result.esicAmount + result.professionalTaxAmount,
-          otherDeductionsTotal: result.otherDeductionsTotal,
-          bonusTotal: 0,
-          advanceApplied,
-          previousPending,
-          netPayable: result.netPayable,
-          paidAmount: 0,
-          pendingAmount: result.pendingAmount,
-          status: result.status,
-          deletedAt: null,
-          createdBy: session?.username,
-        },
-      });
-
-      // Consume outstanding advances oldest-first up to advanceApplied.
-      let remaining = advanceApplied;
-      for (const adv of outstandingAdvances) {
-        if (remaining <= 0) break;
-        const available = adv.amount - adv.adjustedAmount;
-        const consume = Math.min(available, remaining);
-        const newAdjusted = adv.adjustedAmount + consume;
-        await tx.advancePayment.update({
-          where: { id: adv.id },
-          data: {
-            adjustedAmount: newAdjusted,
-            status: newAdjusted >= adv.amount ? "ADJUSTED" : "PARTIALLY_ADJUSTED",
-            updatedBy: session?.username,
-          },
-        });
-        remaining -= consume;
-      }
-
-      await writeLedgerEntry(tx, {
-        teacherId,
-        type: "SALARY_GENERATED",
-        amount: result.netPayable,
-        description: `Salary generated for ${month}/${year} — Net Payable ${formatCurrency(result.netPayable)}`,
-        refId: created.id,
-        createdBy: session?.username,
-      });
-
-      await createNotification(tx, {
-        type: "SALARY_GENERATED",
-        audience: "ADMIN",
-        teacherId,
-        title: "Salary generated",
-        message: `${teacher.name}'s salary for ${month}/${year} has been generated — Net Payable ${formatCurrency(result.netPayable)}.`,
-        createdBy: session?.username,
-      });
-
-      return created;
-    });
-  } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === "P2002" || e.message.includes("write conflict"))) {
-      return { error: "Salary for this period may have already been generated. Please refresh and check before retrying." };
-    }
-    throw e;
-  }
+  const result = await generatePayrollForPeriod(teacherId, month, year, session?.username);
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/payroll");
   revalidatePath("/salary-slips");
@@ -210,29 +45,8 @@ export async function deletePayrollAction(formData: FormData): Promise<void> {
       await tx.salaryPayment.update({ where: { id: p.id }, data: { deletedAt: new Date(), updatedBy: session?.username } });
     }
 
-    // Give back whatever advance this payroll consumed — most recently given advances
-    // first, mirroring a reversal of the oldest-first order it was applied in.
-    let remaining = payroll.advanceApplied;
-    if (remaining > 0) {
-      const advances = await tx.advancePayment.findMany({
-        where: { teacherId: payroll.teacherId, deletedAt: null, adjustedAmount: { gt: 0 } },
-        orderBy: { date: "desc" },
-      });
-      for (const adv of advances) {
-        if (remaining <= 0) break;
-        const refund = Math.min(remaining, adv.adjustedAmount);
-        const newAdjusted = adv.adjustedAmount - refund;
-        await tx.advancePayment.update({
-          where: { id: adv.id },
-          data: {
-            adjustedAmount: newAdjusted,
-            status: newAdjusted <= 0 ? "UNADJUSTED" : "PARTIALLY_ADJUSTED",
-            updatedBy: session?.username,
-          },
-        });
-        remaining -= refund;
-      }
-    }
+    // Give back whatever this payroll had applied against its due installments.
+    await refundInstallmentsForPayroll(tx, id, session?.username);
 
     await tx.payroll.update({
       where: { id },

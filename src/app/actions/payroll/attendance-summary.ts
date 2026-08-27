@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeLedgerEntry } from "@/lib/ledger";
+import { syncPayrollAttendanceIfExists } from "@/lib/payroll-recompute";
+import { generatePayrollForPeriod } from "@/lib/payroll-generate";
 
 export async function saveAttendanceSummaryAction(
   _prevState: { error?: string; success?: boolean } | undefined,
@@ -62,10 +64,24 @@ export async function saveAttendanceSummaryAction(
       description: `Attendance summary saved for ${month}/${year} (present-equivalent days, ${absentDays} absent, ${halfDays} half-day)`,
       createdBy: session?.username,
     });
+
+    await syncPayrollAttendanceIfExists(tx, teacherId, month, year, {
+      workingDays, absentDays, halfDays, paidLeaveDays, unpaidLeaveDays, lateCount,
+    });
   });
+
+  // Auto-generate payroll for this period now that attendance is in. Errors (already
+  // generated, no active salary structure yet) are expected and silently ignored here —
+  // the teacher can still generate manually later from the payroll page.
+  await generatePayrollForPeriod(teacherId, month, year, session?.username);
 
   revalidatePath("/attendance");
   revalidatePath(`/attendance/${teacherId}`);
   revalidatePath(`/payroll/${teacherId}`);
+  revalidatePath("/payroll");
+  revalidatePath("/salary-slips");
+  revalidatePath("/payroll-reports");
+  revalidatePath("/advance-payments");
+  revalidatePath("/dashboard");
   return { success: true };
 }

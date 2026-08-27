@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { getStudentFeeSummary } from "@/lib/fees";
 import { formatDate } from "@/lib/utils";
 import { PrintDownloadActions } from "@/components/print-download-actions";
-import { DocumentHeader } from "@/components/document-header";
 import { DocumentWatermark } from "@/components/document-watermark";
 
 export default async function AdmissionFormPage({
@@ -30,35 +29,16 @@ export default async function AdmissionFormPage({
     if (parts.length === 1) return { first: parts[0], middle: "", last: "" };
     return { first: parts[0], middle: parts.slice(1, -1).join(" "), last: parts[parts.length - 1] };
   }
+  function fullNameDisplay(fullName: string) {
+    const { first, middle, last } = splitName(fullName);
+    return [first, middle, last].filter(Boolean).join(" ") || "-";
+  }
 
-  const studentName = splitName(student.name);
-  const fatherName = splitName(student.fatherName || "");
-  const motherName = splitName(student.motherName || "");
-
-  const inputBox = (label: string, value: string) => (
-    <div>
-      {label && <p className="mb-1 text-xs font-semibold text-slate-700">{label}</p>}
-      <div className="min-h-[36px] rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-800">
-        {value || " "}
-      </div>
-    </div>
-  );
-
-  const radioRow = (label: string, options: string[], selected: string) => (
-    <div>
-      <p className="mb-1 text-xs font-semibold text-slate-700">{label}</p>
-      <div className="flex items-center gap-4 pt-1.5">
-        {options.map((option) => (
-          <span key={option} className="flex items-center gap-1.5 text-sm text-slate-800">
-            <span
-              className={`inline-block h-3.5 w-3.5 rounded-full border border-slate-500 ${
-                option === selected ? "bg-slate-700" : ""
-              }`}
-            />
-            {option}
-          </span>
-        ))}
-      </div>
+  const row = (no: number, label: string, value: string) => (
+    <div className="grid grid-cols-12 gap-2 border-b border-slate-200 py-1.5 text-sm">
+      <div className="col-span-1 text-slate-400">{no})</div>
+      <div className="col-span-5 text-slate-500">{label}</div>
+      <div className="col-span-6 font-semibold">{value || "-"}</div>
     </div>
   );
 
@@ -74,114 +54,83 @@ export default async function AdmissionFormPage({
 
       <div
         id="print-content"
-        className="relative mx-auto max-w-3xl overflow-hidden bg-white p-4 shadow-lg ring-1 ring-slate-200 sm:p-8 print:p-10 print:shadow-none print:ring-0"
+        className="relative mx-auto max-w-3xl overflow-hidden bg-white p-4 shadow-lg ring-1 ring-slate-200 sm:p-8 print:p-12 print:shadow-none print:ring-0"
       >
         <DocumentWatermark />
         <div className="relative z-10">
-          <DocumentHeader
-            docType="Student Admission Form"
-            schoolName={settings?.name || "School Name"}
-            address={settings?.address}
-            udise={settings?.udise}
-            phone={settings?.phone}
-            cornerLeft={settings?.udise ? `School Udise: ${settings.udise}` : undefined}
-            topRight={
-              student.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={student.photoUrl} alt="" className="h-16 w-14 rounded object-cover sm:h-20 sm:w-16" />
-              ) : undefined
-            }
-          />
+          <div className="flex items-start justify-between text-xs text-slate-500">
+            <div>{settings?.udise && `U-DISE No: ${settings.udise}`}</div>
+            <div>Admission No: {student.admissionNo}</div>
+          </div>
 
-          <div className="mt-4 space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              {inputBox("Register Number:", student.admissionNo)}
-              {inputBox("PEN ID:", student.penId || "")}
-              {inputBox("APAAR ID:", student.apaarId || "")}
+          <div className="mt-1 flex items-center gap-2 border-b-2 border-blue-700 pb-4 sm:gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/image/logo.jpeg"
+              alt="School Logo"
+              className="h-12 w-12 shrink-0 object-contain sm:h-20 sm:w-20"
+            />
+            <div className="min-w-0 flex-1 text-center">
+              <h1 className="text-lg leading-tight font-bold text-slate-900 sm:text-2xl">{settings?.name || "School Name"}</h1>
+              {settings?.address && <p className="text-xs text-slate-500 sm:text-sm">{settings.address}</p>}
             </div>
+            {student.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={student.photoUrl} alt="" className="h-20 w-16 shrink-0 rounded object-cover" />
+            ) : (
+              <div className="hidden h-20 w-20 shrink-0 sm:block" />
+            )}
+          </div>
 
-            <div>
-              <p className="mb-1 text-xs font-semibold text-slate-700">Full Name:</p>
-              <div className="grid grid-cols-3 gap-3">
-                {inputBox("", studentName.first)}
-                {inputBox("", studentName.middle)}
-                {inputBox("", studentName.last)}
-              </div>
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-sm text-slate-500">Academic Year: {student.academicYear}</span>
+            <h2 className="text-lg font-bold tracking-wide text-blue-700 uppercase">Student Admission Form</h2>
+            <span className="w-[120px]" />
+          </div>
+
+          <div className="my-4 border-t border-dashed border-slate-300" />
+
+          <div>
+            {row(1, "Name of the Student in Full", fullNameDisplay(student.name))}
+            {row(2, "Father's Name in Full", fullNameDisplay(student.fatherName || ""))}
+            {row(3, "Mother's Name in Full", fullNameDisplay(student.motherName || ""))}
+            {row(4, "Date of Birth & Birth Place", `${formatDate(student.dob)} — ${student.birthPlace || "-"}`)}
+            {row(5, "Gender", student.gender || "")}
+            {row(6, "Mother Tongue", student.motherTongue || "")}
+            {row(7, "Religion", student.religion || "")}
+            {row(8, "Caste", student.caste || "")}
+            {row(9, "Sub-Caste", student.subCaste || "")}
+            {row(10, "Address", `${student.address || "-"}, ${student.village || "-"}, Tal - ${student.taluka || "-"}, Dist - ${student.district || "-"}`)}
+            {row(11, "Phone Number", student.phone || "")}
+            {row(12, "Aadhar Card No", student.aadharNumber || "")}
+            {row(13, "APAAR ID", student.apaarId || "")}
+            {row(14, "PEN ID", student.penId || "")}
+            {row(15, "Class, Medium & Board", `${student.standard.name} — ${student.medium || "-"} / ${student.board || "-"}`)}
+            {row(16, "School Bus", student.schoolBus ? "Yes" : "No")}
+            {row(17, "Date of Admission", formatDate(student.admissionDate))}
+          </div>
+
+          <p className="mt-5 text-sm text-slate-700">
+            I hereby declare and certify that all the information provided above is true and accurate to the
+            best of my knowledge.
+          </p>
+
+          <p className="mt-2 text-sm text-slate-700">
+            Place: <span className="font-semibold">{student.village || student.district || "-"}</span>
+          </p>
+
+          <div className="mt-16 flex items-end justify-between text-sm">
+            <div className="text-center">
+              <div className="mb-1 h-10 w-32 border-b border-slate-400" />
+              <p className="text-slate-500">Parent&apos;s Sign</p>
             </div>
-
-            <div className="grid grid-cols-4 gap-3">
-              {inputBox("Address:", student.address || "")}
-              {inputBox("Village:", student.village || "")}
-              {inputBox("Taluka:", student.taluka || "")}
-              {inputBox("District:", student.district || "")}
+            <div className="text-center">
+              <div className="mb-1 h-10 w-32 border-b border-slate-400" />
+              <p className="text-slate-500">Clerk</p>
             </div>
-
-            <div className="grid grid-cols-4 gap-3">
-              {inputBox("Date of Birth:", formatDate(student.dob))}
-              {inputBox("Birth Place:", student.birthPlace || "")}
-              {inputBox("Aadhar Number:", student.aadharNumber || "")}
-              {radioRow("Gender:", ["Male", "Female"], student.gender || "")}
-            </div>
-
-            <div>
-              <p className="mb-1 text-xs font-semibold text-slate-700">Father&apos;s Full Name:</p>
-              <div className="grid grid-cols-3 gap-3">
-                {inputBox("", fatherName.first)}
-                {inputBox("", fatherName.middle)}
-                {inputBox("", fatherName.last)}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-1 text-xs font-semibold text-slate-700">Mother&apos;s Full Name:</p>
-              <div className="grid grid-cols-3 gap-3">
-                {inputBox("", motherName.first)}
-                {inputBox("", motherName.middle)}
-                {inputBox("", motherName.last)}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {inputBox("Phone Number:", student.phone || "")}
-              {inputBox("Mother Tongue:", student.motherTongue || "")}
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              {inputBox("Religion:", student.religion || "")}
-              {inputBox("Cast:", student.caste || "")}
-              {inputBox("Sub Cast:", student.subCaste || "")}
-            </div>
-
-            <div className="grid grid-cols-4 gap-3">
-              {inputBox("Class:", student.standard.name)}
-              {inputBox("Medium:", student.medium || "")}
-              {inputBox("Board:", student.board || "")}
-              {inputBox("Academic Year:", student.academicYear)}
-            </div>
-
-            {radioRow("School Bus:", ["Yes", "No"], student.schoolBus ? "Yes" : "No")}
-
-            <div className="flex items-start gap-2 pt-1">
-              <span className="mt-0.5 inline-block h-4 w-4 shrink-0 border border-slate-500" />
-              <p className="text-sm leading-snug text-slate-700">
-                I hereby declare and certify that all the information provided above is true and
-                accurate to the best of my knowledge.
-              </p>
-            </div>
-
-            <div className="flex items-end justify-between pt-4 text-sm">
-              <div>
-                <p className="text-slate-700">Date Of Admission: {formatDate(student.admissionDate)}</p>
-                <p className="text-slate-700">Place: {student.village || student.district || ""}</p>
-              </div>
-              <div className="text-center">
-                <div className="mb-1 h-8 w-32 border-b border-slate-400" />
-                <p className="text-slate-500">Parent&apos;s Sign</p>
-              </div>
-              <div className="text-center">
-                <div className="mb-1 h-8 w-32 border-b border-slate-400" />
-                <p className="text-slate-500">Principal</p>
-              </div>
+            <div className="text-center">
+              <div className="mb-1 h-10 w-32 border-b border-slate-400" />
+              <p className="text-slate-500">Principal (Sign &amp; Stamp)</p>
             </div>
           </div>
         </div>

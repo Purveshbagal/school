@@ -5,8 +5,10 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EditAdvanceForm } from "./edit-advance-form";
-import { ArrowLeft } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { ArrowLeft, TriangleAlert } from "lucide-react";
 
 export default async function EditAdvancePaymentPage({
   params,
@@ -19,7 +21,11 @@ export default async function EditAdvancePaymentPage({
     include: { teacher: true },
   });
   if (!advance || advance.deletedAt) notFound();
-  if (advance.status !== "UNADJUSTED") notFound();
+
+  const firstInstallment = await prisma.advanceInstallment.findFirst({
+    where: { advancePaymentId: id, deletedAt: null },
+    orderBy: [{ year: "asc" }, { month: "asc" }],
+  });
 
   return (
     <div className="mx-auto max-w-lg">
@@ -41,11 +47,22 @@ export default async function EditAdvancePaymentPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {advance.status !== "UNADJUSTED" && (
+            <Alert className="mb-4">
+              <TriangleAlert className="h-4 w-4" />
+              <AlertDescription>
+                {formatCurrency(advance.adjustedAmount)} of this advance has already been deducted from salary. Saving
+                changes here will undo that deduction (from any unlocked payroll) and rebuild the schedule fresh from
+                the new amount/EMI/date.
+              </AlertDescription>
+            </Alert>
+          )}
           <EditAdvanceForm
             advance={{
               id: advance.id,
               teacherId: advance.teacherId,
               amount: advance.amount,
+              emiAmount: firstInstallment?.amount || advance.amount,
               note: advance.note,
               date: advance.date,
             }}

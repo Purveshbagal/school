@@ -20,8 +20,6 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          # Give the connection more time before failing, so a transient network
-          # blip between the runner and the VPS doesn't fail the whole deploy outright.
           timeout: 60s
           command_timeout: 15m
           script: |
@@ -38,9 +36,8 @@ jobs:
             ADMIN_PASSWORD=Satwik@123
             EOF
             npm ci
-            npx prisma db push
             rm -rf .next/
             npm run build
-            pm2 restart school --update-env
+            pm2 restart school --update-env || PORT=9696 pm2 start npm --name "school" -- start
             pm2 save
             echo "✅ School Deploy successful!"

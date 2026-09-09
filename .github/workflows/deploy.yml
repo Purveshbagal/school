@@ -35,7 +35,7 @@ jobs:
             ADMIN_USERNAME=LittleStarSchool
             ADMIN_PASSWORD=Satwik@123
             EOF
-            npm ci
+            npm ci --legacy-peer-deps
             rm -rf .next/
             npm run build
             pm2 restart school --update-env || PORT=9696 pm2 start npm --name "school" -- start

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -20,6 +20,7 @@ export function StudentsFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") || "");
+  const isFirstRun = useRef(true);
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -27,6 +28,24 @@ export function StudentsFilters({
     else params.delete(key);
     router.push(`/students?${params.toString()}`);
   }
+
+  // Live search: re-filter as the admin types, without needing Enter or the
+  // Search button. Debounced so it doesn't refetch on every single keystroke,
+  // and uses replace (not push) so typing doesn't spam browser history.
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (q) params.set("q", q);
+      else params.delete("q");
+      router.replace(`/students?${params.toString()}`);
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
   return (
     <form

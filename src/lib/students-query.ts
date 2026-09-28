@@ -3,7 +3,17 @@ import type { Prisma } from "@/generated/prisma/client";
 export const CBSE = "CBSE";
 export const STATE_BOARD = "Maharashtra State Board";
 export const PRE_PRIMARY = "PRE_PRIMARY";
-export const PRE_PRIMARY_STANDARDS = ["LKG", "UKG"];
+// Prefixes, not exact names, so variants like "UKG - A" / "UKG-B" / "LKG 2"
+// are still grouped under Pre-Primary alongside plain "LKG" / "UKG".
+export const PRE_PRIMARY_PREFIXES = ["LKG", "UKG"];
+
+export function prePrimaryStandardFilter(): Prisma.StandardWhereInput {
+  return {
+    OR: PRE_PRIMARY_PREFIXES.map((prefix) => ({
+      name: { startsWith: prefix, mode: "insensitive" as const },
+    })),
+  };
+}
 
 export type StudentsSearchParams = {
   q?: string;
@@ -37,6 +47,6 @@ export function buildStudentsWhere({
   };
 
   return board === PRE_PRIMARY
-    ? { ...baseWhere, standard: { name: { in: PRE_PRIMARY_STANDARDS } } }
+    ? { ...baseWhere, standard: prePrimaryStandardFilter() }
     : { ...baseWhere, ...(board ? { board } : {}) };
 }

@@ -118,6 +118,15 @@ export function StudentForm({
   );
   const feesTouched = useRef(isEdit);
 
+  // Editing a student and switching their standard should pull in that
+  // standard's fee structure, same as it does when the standard is first
+  // picked on a new admission — so re-arm the auto-fill instead of leaving
+  // the old standard's (possibly custom) fee in place.
+  function handleStandardChange(id: string) {
+    setStandardId(id);
+    feesTouched.current = false;
+  }
+
   const [districtName, setDistrictName] = useState(student?.district || "");
   const [talukaName, setTalukaName] = useState(student?.taluka || "");
   const [villageName, setVillageName] = useState(student?.village || "");
@@ -409,7 +418,7 @@ export function StudentForm({
                 name="standardId"
                 required
                 value={standardId}
-                onChange={(e) => setStandardId(e.target.value)}
+                onChange={(e) => handleStandardChange(e.target.value)}
               >
                 <option value="">Select Standard</option>
                 {standards.map((s) => (

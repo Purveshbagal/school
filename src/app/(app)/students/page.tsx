@@ -25,7 +25,7 @@ import {
   CBSE,
   STATE_BOARD,
   PRE_PRIMARY,
-  PRE_PRIMARY_STANDARDS,
+  prePrimaryStandardFilter,
 } from "@/lib/students-query";
 
 export default async function StudentsPage({
@@ -58,7 +58,7 @@ export default async function StudentsPage({
     }),
     prisma.student.count({ where: baseWhere }),
     prisma.student.count({
-      where: { ...baseWhere, standard: { name: { in: PRE_PRIMARY_STANDARDS } } },
+      where: { ...baseWhere, standard: prePrimaryStandardFilter() },
     }),
     prisma.student.count({ where: { ...baseWhere, board: CBSE } }),
     prisma.student.count({ where: { ...baseWhere, board: STATE_BOARD } }),

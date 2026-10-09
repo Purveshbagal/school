@@ -16,6 +16,8 @@ import { getFeesOverview } from "@/lib/fees";
 import { getPendingSalaryReport } from "@/lib/payroll-reports";
 import { getPendingStationaryReport } from "@/lib/stationary";
 import {
+  ArrowUpRight,
+  GraduationCap,
   Users,
   Briefcase,
   IndianRupee,
@@ -47,15 +49,15 @@ function StatGrid({ stats }: { stats: DashboardStat[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((s) => (
-        <Link key={s.label} href={s.href} className="block">
-          <Card className={`border-t-2 ${s.border} transition-shadow hover:shadow-md`}>
+        <Link key={s.label} href={s.href} className="group block rounded-xl focus-visible:outline-primary">
+          <Card className={`h-full border-t-2 ${s.border} transition-all hover:-translate-y-0.5 hover:shadow-md`}>
             <CardContent className="flex items-start justify-between">
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="mt-1 truncate text-2xl font-semibold">{s.value}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{s.sub}</p>
+                <p className="text-sm font-medium text-muted-foreground">{s.label}</p>
+                <p className="mt-3 break-words text-2xl font-semibold tracking-tight tabular-nums xl:text-3xl">{s.value}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{s.sub}</p>
               </div>
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${s.tone}`}>
+              <div className={`ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${s.tone}`}>
                 <s.icon className="h-4.5 w-4.5" />
               </div>
             </CardContent>
@@ -205,7 +207,23 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="Overview of school operations" />
+      <PageHeader title="School overview" description="A clear view of your school. Everything you need for the day." />
+
+      <section className="relative mb-7 overflow-hidden rounded-2xl bg-sidebar p-6 text-white sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-28 size-80 rounded-full border-[40px] border-white/5" />
+        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+          <div>
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-sidebar-primary"><GraduationCap className="size-4" /> Your school, connected</p>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">More clarity. Better school days.</h2>
+            <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300">Manage admissions, stay on top of collections, and keep your school moving forward.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/students/new" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-sidebar transition hover:bg-teal-50"><UserPlus className="size-4" /> New admission</Link>
+            <Link href="/payments/new" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 px-4 text-sm font-medium transition hover:bg-white/10">Record payment <ArrowUpRight className="size-4" /></Link>
+          </div>
+        </div>
+      </section>
+      <div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-semibold">School at a glance</h2><span className="text-xs text-muted-foreground">Students &amp; finances</span></div>
 
       <StatGrid stats={primaryStats} />
       <div className="mt-4">
@@ -214,17 +232,18 @@ export default async function DashboardPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Quick actions</CardTitle>
+          <p className="text-sm text-muted-foreground">Everyday tasks, one click away.</p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
             {quickActions.map((a) => (
               <Link
                 key={a.label}
                 href={a.href}
-                className="flex flex-col items-center gap-1.5 rounded-lg border border-border p-3 text-center text-xs font-medium transition-colors hover:border-primary/40 hover:bg-primary/5"
+                className="group flex flex-col items-start gap-3 rounded-xl border border-border bg-muted/30 p-4 text-left text-xs font-medium transition-all hover:border-primary/30 hover:bg-accent hover:shadow-sm"
               >
-                <a.icon className="h-5 w-5 text-primary" />
+                <span className="flex size-9 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover:border-primary/20"><a.icon className="size-4" /></span>
                 {a.label}
               </Link>
             ))}

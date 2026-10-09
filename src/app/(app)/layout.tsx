@@ -21,7 +21,8 @@ export default async function AppLayout({
   const permissions = session.role === "admin" ? ("all" as const) : session.permissions;
 
   return (
-    <div className="min-h-screen">
+    <div className="app-workspace min-h-screen bg-background">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:p-3">Skip to content</a>
       <SidebarNav
         schoolName={schoolName}
         username={session.teacherName || session.username}
@@ -35,7 +36,7 @@ export default async function AppLayout({
           permissions={permissions}
           notifications={notifications}
         />
-        <main className="w-full px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-8 lg:pb-8 2xl:px-12">
+        <main id="main-content" className="mx-auto max-w-[1680px] w-full px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-8 lg:pb-8 2xl:px-12">
           {children}
         </main>
       </div>

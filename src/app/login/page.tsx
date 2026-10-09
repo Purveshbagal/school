@@ -24,7 +24,7 @@ export default async function LoginPage() {
   const schoolName = settings?.name || "School Management System";
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-slate-50">
       {/* Branded panel */}
       <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-sidebar px-12 py-12 text-sidebar-foreground lg:flex">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sidebar-primary/25 via-transparent to-transparent" />
@@ -51,8 +51,8 @@ export default async function LoginPage() {
         </div>
 
         <div className="relative">
-          <h2 className="max-w-lg text-5xl leading-[1.15] tracking-tight font-semibold text-white">
-            A brighter school day starts here.
+          <h2 className="max-w-sm text-3xl leading-tight font-bold text-white">
+            Run your entire school from one dashboard.
           </h2>
           <p className="mt-3 max-w-sm text-sm text-sidebar-foreground/60">
             Admissions, fees, payroll, transport &amp; stationary — built for how
@@ -82,7 +82,7 @@ export default async function LoginPage() {
         <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl lg:hidden" />
         <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl lg:hidden" />
 
-        <div className="relative w-full max-w-md">
+        <div className="relative w-full max-w-sm">
           <div className="mb-8 text-center lg:hidden">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-900/10 ring-1 ring-slate-200">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -95,11 +95,11 @@ export default async function LoginPage() {
           </div>
 
           <div className="mb-6 hidden lg:block">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
             <p className="mt-1.5 text-sm text-slate-500">Sign in to continue to your dashboard</p>
           </div>
 
-          <div className="rounded-3xl border border-border bg-white p-8 shadow-xl shadow-slate-900/5">
+          <div className="rounded-2xl border border-slate-200 bg-white/90 p-7 shadow-xl shadow-slate-900/5 backdrop-blur">
             <LoginForm />
           </div>
 

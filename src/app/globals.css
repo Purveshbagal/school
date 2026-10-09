@@ -55,44 +55,44 @@
 }
 
 :root {
-  --background: #f3f6f8;
-  --foreground: #182d40;
-  --card: #ffffff;
-  --card-foreground: #182d40;
-  --popover: #ffffff;
-  --popover-foreground: #182d40;
-  --primary: #087f80;
-  --primary-foreground: #ffffff;
-  --secondary: #eaf2f4;
-  --secondary-foreground: #254d5b;
-  --muted: #f0f4f7;
-  --muted-foreground: #607486;
-  --accent: #e5f3f1;
-  --accent-foreground: #096866;
-  --destructive: #c64253;
-  --success: #16805d;
-  --success-foreground: #ffffff;
-  --warning: #a76812;
-  --warning-foreground: #ffffff;
-  --info: #327aa0;
-  --info-foreground: #ffffff;
-  --border: #e0e8ee;
-  --input: #cbd7e0;
-  --ring: #087f80;
-  --chart-1: #087f80;
-  --chart-2: #327aa0;
-  --chart-3: #16805d;
-  --chart-4: #d8a24c;
-  --chart-5: #c64253;
-  --radius: 0.75rem;
-  --sidebar: #142b3c;
-  --sidebar-foreground: #edf5fa;
-  --sidebar-primary: #64d4c5;
-  --sidebar-primary-foreground: #142b3c;
-  --sidebar-accent: #234353;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #ffffff12;
-  --sidebar-ring: #64d4c5;
+  --background: oklch(0.965 0.014 230);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.478 0.166 260.5);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0.01 260);
+  --secondary-foreground: oklch(0.35 0.05 260);
+  --muted: oklch(0.97 0.005 260);
+  --muted-foreground: oklch(0.53 0.02 260);
+  --accent: oklch(0.94 0.03 260);
+  --accent-foreground: oklch(0.35 0.1 260);
+  --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.62 0.15 155);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.6 0.17 70);
+  --warning-foreground: oklch(0.985 0 0);
+  --info: oklch(0.62 0.15 235);
+  --info-foreground: oklch(0.985 0 0);
+  --border: oklch(0.914 0.01 260);
+  --input: oklch(0.914 0.01 260);
+  --ring: oklch(0.6 0.14 260);
+  --chart-1: oklch(0.55 0.18 260);
+  --chart-2: oklch(0.7 0.15 200);
+  --chart-3: oklch(0.75 0.15 145);
+  --chart-4: oklch(0.75 0.16 80);
+  --chart-5: oklch(0.65 0.2 25);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.24 0.045 258);
+  --sidebar-foreground: oklch(0.96 0.008 258);
+  --sidebar-primary: oklch(0.65 0.16 260.5);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.33 0.055 258);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.65 0.16 260.5);
 }
 
 .dark {
@@ -147,27 +147,22 @@
   }
 }
 
-/* Workspace surfaces are scoped so printed documents retain their layout. */
-@layer base {
-  body { font-feature-settings: "cv11", "ss01"; }
-  ::selection { background: #bcebe3; color: #142b3c; }
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
-}
-@media screen {
-  .app-workspace [data-slot="card"] {
-    box-shadow: 0 3px 16px -8px #18354d24;
+/* Mobile-only: shrink Tailwind's font-size scale app-wide (all text-* utilities
+   read font-size from these theme vars). Desktop (lg and up) is untouched;
+   spacing/padding tokens are separate (--spacing) so layout sizing is unaffected. */
+@media (max-width: 63.9375rem) {
+  :root {
+    --text-xs: 0.6875rem;
+    --text-sm: 0.75rem;
+    --text-base: 0.875rem;
+    --text-lg: 1rem;
+    --text-xl: 1.0625rem;
+    --text-2xl: 1.25rem;
+    --text-3xl: 1.5rem;
+    --text-4xl: 1.75rem;
+    --text-5xl: 2.25rem;
+    --text-6xl: 2.75rem;
   }
-  .app-workspace [data-slot="table-container"] { border-radius: 10px; }
-  .app-workspace [data-slot="table-head"] { padding-inline: 14px; height: 44px; }
-  .app-workspace [data-slot="table-cell"] { padding: 14px; }
-  .app-workspace [data-slot="input"],
-  .app-workspace [data-slot="native-select"],
-  .app-workspace [data-slot="select-trigger"] { min-height: 40px; }
-  .app-workspace [data-slot="button"] { min-height: 36px; }
-  .workspace-nav { scrollbar-width: thin; scrollbar-color: #426171 transparent; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
 @media print {

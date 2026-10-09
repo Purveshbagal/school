@@ -64,10 +64,9 @@ export function BottomNav({ permissions = "all" }: { permissions?: NavPermission
             <Link
               key={item.href}
               href={item.href}
-              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 py-3 text-[11px] leading-none font-medium transition-colors",
-                active ? "bg-primary/5 text-primary" : "text-muted-foreground"
+                "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] leading-none font-medium transition-colors",
+                active ? "text-foreground" : "text-muted-foreground"
               )}
             >
               <ItemIcon className={cn("h-5 w-5", active ? strongTone(item.tone) : "text-current opacity-70")} />
@@ -79,7 +78,7 @@ export function BottomNav({ permissions = "all" }: { permissions?: NavPermission
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex flex-1 flex-col items-center justify-center gap-1 py-3 text-[11px] leading-none font-medium text-muted-foreground transition-colors"
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] leading-none font-medium text-muted-foreground transition-colors"
           >
             <MoreHorizontal className="h-5 w-5 opacity-70" />
             <span className="truncate">More</span>

@@ -22,10 +22,10 @@ export function NavLinks({
   const sections = getVisibleNavSections(permissions);
 
   return (
-    <nav className="workspace-nav flex-1 space-y-6 overflow-y-auto px-3 py-6">
+    <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
       {sections.map((section) => (
         <div key={section.label}>
-          <p className="mb-1.5 px-2.5 text-[10.5px] font-bold tracking-[0.12em] text-sidebar-foreground/60 uppercase">
+          <p className="mb-1.5 px-2.5 text-[10.5px] font-bold tracking-[0.12em] text-sidebar-foreground/40 uppercase">
             {section.label}
           </p>
           <div className="space-y-0.5">
@@ -39,11 +39,10 @@ export function NavLinks({
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-all",
+                    "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all",
                     active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground ring-1 ring-white/10"
+                      ? "bg-gradient-to-r from-sidebar-accent to-sidebar-accent/70 text-sidebar-accent-foreground shadow-sm shadow-black/20"
                       : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   )}
                 >
@@ -56,7 +55,7 @@ export function NavLinks({
                       active ? "bg-white/10" : "bg-transparent group-hover:bg-white/5"
                     )}
                   >
-                    <ItemIcon className={cn("h-4 w-4", active ? "text-sidebar-primary" : "text-current opacity-80")} />
+                    <ItemIcon className={cn("h-4 w-4", active ? item.tone : "text-current opacity-80")} />
                   </span>
                   <span className="truncate">{item.label}</span>
                 </Link>
@@ -71,7 +70,7 @@ export function NavLinks({
 
 export function SidebarBrand({ schoolName }: { schoolName: string }) {
   return (
-    <div className="relative flex min-h-20 items-center gap-3 overflow-hidden border-b border-sidebar-border px-5 py-3">
+    <div className="relative flex min-h-16 items-center gap-3 overflow-hidden border-b border-sidebar-border px-5 py-3">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sidebar-primary/15 via-transparent to-transparent" />
       <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-md shadow-black/30 ring-1 ring-white/10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -115,14 +114,14 @@ export function SidebarFooter({
   return (
     <div className="border-t border-sidebar-border p-3">
       <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/40 px-2.5 py-2">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sidebar-primary to-sidebar-primary/60 text-xs font-bold text-sidebar shadow-sm">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sidebar-primary to-sidebar-primary/60 text-xs font-bold text-white shadow-sm">
           {initial}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-sidebar-foreground capitalize">
             {username || "Admin"}
           </p>
-          <p className="text-[10.5px] text-sidebar-foreground/45">School workspace</p>
+          <p className="text-[10.5px] text-sidebar-foreground/45">Administrator</p>
         </div>
         <NotificationBell notifications={notifications} />
         <SignOutButton />

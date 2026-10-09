@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { formatDateInput } from "@/lib/utils";
+import { feeStructureAmount } from "@/lib/rte";
 import { StudentForm } from "../../student-form";
 
 export default async function EditStudentPage({
@@ -14,9 +15,21 @@ export default async function EditStudentPage({
   if (!student) notFound();
 
   const standards = await prisma.standard.findMany({ orderBy: { order: "asc" } });
-  const feeStructures = await prisma.feeStructure.findMany({
-    select: { standardId: true, academicYear: true, totalAmount: true },
-  });
+  const feeStructures = (
+    await prisma.feeStructure.findMany({
+      select: {
+        standardId: true,
+        academicYear: true,
+        totalAmount: true,
+        components: { select: { name: true, amount: true } },
+      },
+    })
+  ).map((fs) => ({
+    standardId: fs.standardId,
+    academicYear: fs.academicYear,
+    totalAmount: fs.totalAmount,
+    rteAmount: feeStructureAmount(fs, true),
+  }));
   const districts = await prisma.district.findMany({
     orderBy: { name: "asc" },
     include: { talukas: { orderBy: { name: "asc" }, include: { villages: { orderBy: { name: "asc" } } } } },

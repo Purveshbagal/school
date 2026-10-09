@@ -25,6 +25,7 @@ import {
   CBSE,
   STATE_BOARD,
   PRE_PRIMARY,
+  RTE,
   prePrimaryStandardFilter,
 } from "@/lib/students-query";
 
@@ -50,7 +51,7 @@ export default async function StudentsPage({
   const baseWhere = buildStudentsWhere({ q, standard, village, status });
   const activeWhere = buildStudentsWhere({ q, standard, village, status, board });
 
-  const [students, totalCount, prePrimaryCount, cbseCount, stateBoardCount] = await Promise.all([
+  const [students, totalCount, prePrimaryCount, cbseCount, stateBoardCount, rteCount] = await Promise.all([
     prisma.student.findMany({
       where: activeWhere,
       include: { standard: true },
@@ -62,6 +63,7 @@ export default async function StudentsPage({
     }),
     prisma.student.count({ where: { ...baseWhere, board: CBSE } }),
     prisma.student.count({ where: { ...baseWhere, board: STATE_BOARD } }),
+    prisma.student.count({ where: { ...baseWhere, rte: true } }),
   ]);
 
   const tabs = [
@@ -69,6 +71,7 @@ export default async function StudentsPage({
     { label: "Pre-Primary", value: PRE_PRIMARY, count: prePrimaryCount },
     { label: "CBSE Students", value: CBSE, count: cbseCount },
     { label: "State Board Students", value: STATE_BOARD, count: stateBoardCount },
+    { label: "RTE Students", value: RTE, count: rteCount },
   ];
 
   const summaries = await Promise.all(

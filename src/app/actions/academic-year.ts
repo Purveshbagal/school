@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
+import { feeStructureAmount } from "@/lib/rte";
 
 export async function switchAcademicYearAction(
   _prevState: { error?: string } | undefined,
@@ -56,9 +57,7 @@ export async function switchAcademicYearAction(
         include: { payments: true, villageRef: true },
       });
 
-      const oldFeeStructureMap = new Map(
-        fromFeeStructures.map((fs) => [fs.standardId, fs.totalAmount])
-      );
+      const oldFeeStructureMap = new Map(fromFeeStructures.map((fs) => [fs.standardId, fs]));
 
       const entries: {
         studentId: string;
@@ -75,7 +74,8 @@ export async function switchAcademicYearAction(
       }[] = [];
 
       for (const student of activeStudents) {
-        const baseFee = student.customFee ?? oldFeeStructureMap.get(student.standardId) ?? 0;
+        const baseFee =
+          student.customFee ?? feeStructureAmount(oldFeeStructureMap.get(student.standardId), student.rte);
         const standardFee = Math.max(0, baseFee - (student.discount || 0));
         // Use the bus fee as it was locked in at the student's last save — not a live
         // re-lookup — so this "closing" balance matches what they were actually charged.

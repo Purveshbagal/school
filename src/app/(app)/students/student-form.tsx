@@ -11,7 +11,13 @@ import { formatDateInput } from "@/lib/utils";
 import { UserRound, Users, GraduationCap, MapPin, Wallet, ImagePlus, X, type LucideIcon } from "lucide-react";
 
 type Standard = { id: string; name: string };
-type FeeStructureLookup = { standardId: string; academicYear: string; totalAmount: number };
+type FeeStructureLookup = {
+  standardId: string;
+  academicYear: string;
+  totalAmount: number;
+  /** Total minus tuition — what an RTE student pays from this structure. */
+  rteAmount: number;
+};
 type LocationVillage = { id: string; name: string; busFee: number };
 type LocationTaluka = { id: string; name: string; villages: LocationVillage[] };
 type LocationDistrict = { id: string; name: string; talukas: LocationTaluka[] };
@@ -41,6 +47,7 @@ type StudentValues = {
   board?: string | null;
   photoUrl?: string | null;
   schoolBus?: boolean;
+  rte?: boolean;
   standardId?: string;
   academicYear?: string;
   admissionDate?: Date | string | null;
@@ -131,6 +138,14 @@ export function StudentForm({
   const [talukaName, setTalukaName] = useState(student?.taluka || "");
   const [villageName, setVillageName] = useState(student?.village || "");
   const [schoolBus, setSchoolBus] = useState(student?.schoolBus ? "true" : "false");
+  const [rte, setRte] = useState(student?.rte ? "true" : "false");
+
+  // RTE waives tuition, so toggling it (including on an existing student's edit)
+  // re-arms the School Fees auto-fill, same as switching standard.
+  function handleRteChange(value: string) {
+    setRte(value);
+    feesTouched.current = false;
+  }
 
   const [photoUrl, setPhotoUrl] = useState(student?.photoUrl || "");
   const [photoError, setPhotoError] = useState("");
@@ -191,13 +206,15 @@ export function StudentForm({
     setVillageName("");
   }
 
-  const autoFee = useMemo(
-    () =>
-      feeStructures.find(
-        (f) => f.standardId === standardId && f.academicYear === academicYear
-      )?.totalAmount ?? 0,
+  const selectedFeeStructure = useMemo(
+    () => feeStructures.find((f) => f.standardId === standardId && f.academicYear === academicYear),
     [feeStructures, standardId, academicYear]
   );
+  const autoFee =
+    (rte === "true" ? selectedFeeStructure?.rteAmount : selectedFeeStructure?.totalAmount) ?? 0;
+  const tuitionWaived = selectedFeeStructure
+    ? selectedFeeStructure.totalAmount - selectedFeeStructure.rteAmount
+    : 0;
 
   useEffect(() => {
     if (!feesTouched.current) {
@@ -574,6 +591,20 @@ export function StudentForm({
                 value={values.admissionDate}
                 onChange={(e) => updateValue("admissionDate", e.target.value)}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rte">RTE (Right to Education)</Label>
+              <NativeSelect id="rte" name="rte" value={rte} onChange={(e) => handleRteChange(e.target.value)}>
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </NativeSelect>
+              {rte === "true" && (
+                <p className="text-xs text-muted-foreground">
+                  {tuitionWaived > 0
+                    ? `Tuition fee of ₹${tuitionWaived} waived — only other fees (Online & Exam etc.) and bus fee apply`
+                    : "Tuition fee waived — only other fees (Online & Exam etc.) and bus fee apply"}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="schoolFees">School Fees (₹)</Label>

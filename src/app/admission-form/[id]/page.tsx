@@ -107,7 +107,8 @@ export default async function AdmissionFormPage({
             {row(14, "PEN ID", student.penId || "")}
             {row(15, "Class, Medium & Board", `${student.standard.name} — ${student.medium || "-"} / ${student.board || "-"}`)}
             {row(16, "School Bus", student.schoolBus ? "Yes" : "No")}
-            {row(17, "Date of Admission", formatDate(student.admissionDate))}
+            {row(17, "RTE Admission", student.rte ? "Yes" : "No")}
+            {row(18, "Date of Admission", formatDate(student.admissionDate))}
           </div>
 
           <p className="mt-5 text-sm text-slate-700">

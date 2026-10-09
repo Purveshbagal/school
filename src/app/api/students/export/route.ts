@@ -7,6 +7,7 @@ import {
   STUDENT_EXPORT_ONLY_COLUMNS,
 } from "@/lib/students-excel";
 import { formatDateInput } from "@/lib/utils";
+import { feeStructureAmount } from "@/lib/rte";
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -24,16 +25,16 @@ export async function GET(request: NextRequest) {
       include: { standard: true, payments: true },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.feeStructure.findMany(),
+    prisma.feeStructure.findMany({ include: { components: true } }),
   ]);
 
   const feeStructureMap = new Map(
-    feeStructures.map((fs) => [`${fs.standardId}_${fs.academicYear}`, fs.totalAmount])
+    feeStructures.map((fs) => [`${fs.standardId}_${fs.academicYear}`, fs])
   );
 
   const rows = students.map((s) => {
     const baseFee =
-      s.customFee ?? feeStructureMap.get(`${s.standardId}_${s.academicYear}`) ?? 0;
+      s.customFee ?? feeStructureAmount(feeStructureMap.get(`${s.standardId}_${s.academicYear}`), s.rte);
     const standardFee = Math.max(0, baseFee - (s.discount || 0));
     const busFee = s.schoolBus ? s.busFeeSnapshot || 0 : 0;
     const totalFee = s.openingBalance + standardFee + busFee;
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       medium: s.medium || "",
       board: s.board || "",
       schoolBus: s.schoolBus ? "Yes" : "No",
+      rte: s.rte ? "Yes" : "No",
       admissionDate: formatDateInput(s.admissionDate),
       status: s.status,
       customFee: s.customFee ?? "",

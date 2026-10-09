@@ -3,6 +3,8 @@ import type { Prisma } from "@/generated/prisma/client";
 export const CBSE = "CBSE";
 export const STATE_BOARD = "Maharashtra State Board";
 export const PRE_PRIMARY = "PRE_PRIMARY";
+// Not a board — shares the `board` URL param so the RTE tab sits alongside the board tabs.
+export const RTE = "RTE";
 // Prefixes, not exact names, so variants like "UKG - A" / "UKG-B" / "LKG 2"
 // are still grouped under Pre-Primary alongside plain "LKG" / "UKG".
 export const PRE_PRIMARY_PREFIXES = ["LKG", "UKG"];
@@ -46,7 +48,7 @@ export function buildStudentsWhere({
       : {}),
   };
 
-  return board === PRE_PRIMARY
-    ? { ...baseWhere, standard: prePrimaryStandardFilter() }
-    : { ...baseWhere, ...(board ? { board } : {}) };
+  if (board === PRE_PRIMARY) return { ...baseWhere, standard: prePrimaryStandardFilter() };
+  if (board === RTE) return { ...baseWhere, rte: true };
+  return { ...baseWhere, ...(board ? { board } : {}) };
 }

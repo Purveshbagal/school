@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/delete-button";
 import { formatCurrency, formatDate, formatDateInput } from "@/lib/utils";
 import { PaymentForm } from "@/components/payment-form";
+import { isTuitionComponent } from "@/lib/rte";
 import { deleteStudentAction } from "@/app/actions/students";
 import { deletePaymentAction } from "@/app/actions/payments";
 import { Pencil, Receipt, Printer, FileText, Wallet } from "lucide-react";
@@ -167,6 +168,10 @@ export default async function StudentDetailPage({
                   <dd className="font-medium">{student.schoolBus ? "Yes" : "No"}</dd>
                 </div>
                 <div>
+                  <dt className="text-muted-foreground">RTE</dt>
+                  <dd className="font-medium">{student.rte ? "Yes" : "No"}</dd>
+                </div>
+                <div>
                   <dt className="text-muted-foreground">Admission Date</dt>
                   <dd className="font-medium">{formatDate(student.admissionDate)}</dd>
                 </div>
@@ -190,11 +195,17 @@ export default async function StudentDetailPage({
                   <div className="col-span-2 sm:col-span-3">
                     <dt className="mb-1 text-muted-foreground">Fee Components</dt>
                     <dd className="flex flex-wrap gap-1.5">
-                      {feeStructure.components.map((c) => (
-                        <Badge key={c.id} variant="info">
-                          {c.name}: {formatCurrency(c.amount)}
-                        </Badge>
-                      ))}
+                      {feeStructure.components.map((c) =>
+                        student.rte && isTuitionComponent(c.name) ? (
+                          <Badge key={c.id} variant="outline" className="line-through">
+                            {c.name}: {formatCurrency(c.amount)} (RTE waived)
+                          </Badge>
+                        ) : (
+                          <Badge key={c.id} variant="info">
+                            {c.name}: {formatCurrency(c.amount)}
+                          </Badge>
+                        )
+                      )}
                     </dd>
                   </div>
                 )}

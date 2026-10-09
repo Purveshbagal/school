@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getStudentFeeSummary } from "@/lib/fees";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
+import { isTuitionComponent } from "@/lib/rte";
 import { PrintDownloadActions } from "@/components/print-download-actions";
 import { DocumentHeader } from "@/components/document-header";
 
@@ -23,7 +24,8 @@ export default async function FeeStructurePage({
   const settings = await prisma.schoolSettings.findUnique({ where: { id: "main" } });
 
   const components = feeStructure?.components ?? [];
-  const componentsTotal = components.reduce((sum, c) => sum + c.amount, 0);
+  const isWaived = (c: { name: string }) => student.rte && isTuitionComponent(c.name);
+  const componentsTotal = components.filter((c) => !isWaived(c)).reduce((sum, c) => sum + c.amount, 0);
   // Custom fee / discount can make the standard fee diverge from the sum of the
   // saved components — show the difference as its own line so the total still adds up.
   const adjustment = standardFee - componentsTotal;
@@ -89,7 +91,16 @@ export default async function FeeStructurePage({
               components.map((c) => (
                 <tr key={c.id} className="border-b border-slate-200">
                   <td className="px-3 py-2">{c.name}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(c.amount)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {isWaived(c) ? (
+                      <>
+                        <span className="text-slate-400 line-through">{formatCurrency(c.amount)}</span>{" "}
+                        <span className="font-semibold">Waived (RTE)</span>
+                      </>
+                    ) : (
+                      formatCurrency(c.amount)
+                    )}
+                  </td>
                 </tr>
               ))
             )}

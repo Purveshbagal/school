@@ -132,6 +132,11 @@ export async function importStudentsAction(
     const schoolBusText = cellToText(values.schoolBus).toLowerCase();
     const schoolBus = schoolBusText === "yes" || schoolBusText === "true" || schoolBusText === "1";
 
+    // Blank (e.g. a file exported before this column existed) leaves an existing
+    // student's RTE untouched instead of resetting it to No.
+    const rteText = cellToText(values.rte).toLowerCase();
+    const rte = rteText ? rteText === "yes" || rteText === "true" || rteText === "1" : undefined;
+
     const statusText = cellToText(values.status).toUpperCase();
     const status = statusText === "INACTIVE" ? "INACTIVE" : "ACTIVE";
 
@@ -162,6 +167,7 @@ export async function importStudentsAction(
       medium: cellToText(values.medium) || null,
       board: cellToText(values.board) || null,
       schoolBus,
+      rte,
       admissionDate: cellToDate(values.admissionDate) ?? new Date(),
       status,
       customFee: cellToNumber(values.customFee),

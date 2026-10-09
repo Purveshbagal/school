@@ -90,6 +90,9 @@ model Student {
   /// Bus fee locked in from the student's village at the last save (create/edit/promotion).
   /// Later changes to the village's bus fee don't retroactively affect already-saved students.
   busFeeSnapshot Float       @default(0)
+  /// RTE (Right to Education) admission — tuition is waived, so the student only pays the
+  /// fee structure's other components (Online & Exam fee etc.) plus bus fee. See src/lib/rte.ts.
+  rte           Boolean      @default(false)
   standardId    String       @db.ObjectId
   standard      Standard     @relation(fields: [standardId], references: [id])
   academicYear  String

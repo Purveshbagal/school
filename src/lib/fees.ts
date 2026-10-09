@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { feeStructureAmount } from "@/lib/rte";
 
 export async function getStudentFeeSummary(studentId: string) {
   const student = await prisma.student.findUnique({
@@ -20,7 +21,7 @@ export async function getStudentFeeSummary(studentId: string) {
     include: { components: true },
   });
 
-  const baseFee = student.customFee ?? feeStructure?.totalAmount ?? 0;
+  const baseFee = student.customFee ?? feeStructureAmount(feeStructure, student.rte);
   const standardFee = Math.max(0, baseFee - (student.discount || 0));
   const busFee = student.schoolBus ? student.busFeeSnapshot || 0 : 0;
   const openingBalance = student.openingBalance || 0;
@@ -53,16 +54,17 @@ async function computePendingByStudent() {
       where: { status: "ACTIVE" },
       include: { payments: true, standard: true },
     }),
-    prisma.feeStructure.findMany(),
+    prisma.feeStructure.findMany({ include: { components: true } }),
   ]);
 
   const feeStructureMap = new Map(
-    feeStructures.map((fs) => [`${fs.standardId}_${fs.academicYear}`, fs.totalAmount])
+    feeStructures.map((fs) => [`${fs.standardId}_${fs.academicYear}`, fs])
   );
 
   const pendingByStudent = students.map((student) => {
     const baseFee =
-      student.customFee ?? feeStructureMap.get(`${student.standardId}_${student.academicYear}`) ?? 0;
+      student.customFee ??
+      feeStructureAmount(feeStructureMap.get(`${student.standardId}_${student.academicYear}`), student.rte);
     const standardFee = Math.max(0, baseFee - (student.discount || 0));
     const busFee = student.schoolBus ? student.busFeeSnapshot || 0 : 0;
     const openingBalance = student.openingBalance || 0;

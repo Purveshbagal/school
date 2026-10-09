@@ -17,7 +17,7 @@ export default async function PendingFeesByStandardPage({
   const group = groups.find((g) => g.standard.id === id);
   if (!group) notFound();
 
-  const { standard, totalDue, students } = group;
+  const { standard, totalDue, totalPaid, students } = group;
 
   return (
     <div>
@@ -31,12 +31,20 @@ export default async function PendingFeesByStandardPage({
         }
       />
 
-      <Card className="mb-6 border-t-2 border-t-destructive">
-        <CardContent>
-          <p className="text-xs text-muted-foreground">Total Pending — Standard {standard.name}</p>
-          <p className="mt-1 text-3xl font-bold text-destructive">{formatCurrency(totalDue)}</p>
-        </CardContent>
-      </Card>
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+        <Card className="border-t-2 border-t-destructive">
+          <CardContent>
+            <p className="text-xs text-muted-foreground">Total Pending — Standard {standard.name}</p>
+            <p className="mt-1 text-3xl font-bold text-destructive">{formatCurrency(totalDue)}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-t-2 border-t-success">
+          <CardContent>
+            <p className="text-xs text-muted-foreground">Total Paid — Standard {standard.name}</p>
+            <p className="mt-1 text-3xl font-bold text-success">{formatCurrency(totalPaid)}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className="overflow-hidden py-0">
         {students.length === 0 ? (
@@ -45,6 +53,13 @@ export default async function PendingFeesByStandardPage({
           </p>
         ) : (
           <div className="divide-y divide-border">
+            <div className="flex items-center justify-between gap-3 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
+              <span>Student</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="w-24 text-right sm:w-32">Pending</span>
+                <span className="w-24 text-right sm:w-32">Paid</span>
+              </div>
+            </div>
             {students.map((s) => (
               <Link
                 key={s.id}
@@ -60,9 +75,14 @@ export default async function PendingFeesByStandardPage({
                     {s.busDue > 0 && <> · Bus: {formatCurrency(s.busDue)}</>}
                   </p>
                 </div>
-                <span className="shrink-0 font-semibold text-destructive">
-                  {formatCurrency(s.due)}
-                </span>
+                <div className="flex shrink-0 items-center gap-2 text-sm sm:text-base">
+                  <span className="w-24 text-right font-semibold text-destructive sm:w-32">
+                    {formatCurrency(s.due)}
+                  </span>
+                  <span className="w-24 text-right font-semibold text-success sm:w-32">
+                    {formatCurrency(s.paid)}
+                  </span>
+                </div>
               </Link>
             ))}
           </div>

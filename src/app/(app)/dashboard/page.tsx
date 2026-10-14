@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getFeesOverview } from "@/lib/fees";
+import { formatExamDateRange } from "@/lib/hall-tickets";
 import { getPendingSalaryReport } from "@/lib/payroll-reports";
 import { getPendingStationaryReport } from "@/lib/stationary";
 import {
@@ -373,7 +374,7 @@ export default async function DashboardPage() {
                   {recentExams.map((e) => (
                     <TableRow key={e.id}>
                       <TableCell className="font-medium">{e.name}</TableCell>
-                      <TableCell>{formatDate(e.examDate)}</TableCell>
+                      <TableCell>{formatExamDateRange(e.examDate, e.examEndDate)}</TableCell>
                       <TableCell className="text-right">
                         <Badge variant={e.resultLinkActive ? "success" : "outline"}>
                           {e.resultLinkActive ? "Active" : "Off"}

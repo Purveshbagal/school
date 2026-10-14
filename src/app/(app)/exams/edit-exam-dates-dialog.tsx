@@ -14,17 +14,20 @@ import {
 } from "@/components/ui/dialog";
 import { updateExamDatesAction } from "@/app/actions/exams";
 import { formatDateInput } from "@/lib/utils";
+import { ExamDateRangeFields } from "./exam-date-range-fields";
 import { Pencil } from "lucide-react";
 
 export function EditExamDatesDialog({
   examId,
   examName,
   examDate,
+  examEndDate,
   resultDate,
 }: {
   examId: string;
   examName: string;
   examDate: Date;
+  examEndDate: Date | null;
   resultDate: Date;
 }) {
   const [open, setOpen] = useState(false);
@@ -45,16 +48,11 @@ export function EditExamDatesDialog({
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           <input type="hidden" name="id" value={examId} />
-          <div className="space-y-1.5">
-            <Label htmlFor={`examDate-${examId}`}>Exam Date</Label>
-            <Input
-              id={`examDate-${examId}`}
-              name="examDate"
-              type="date"
-              defaultValue={formatDateInput(examDate)}
-              required
-            />
-          </div>
+          <ExamDateRangeFields
+            idPrefix={`edit-${examId}`}
+            defaultFrom={formatDateInput(examDate)}
+            defaultTo={formatDateInput(examEndDate ?? examDate)}
+          />
           <div className="space-y-1.5">
             <Label htmlFor={`resultDate-${examId}`}>Result Date</Label>
             <Input

@@ -43,6 +43,9 @@ export async function deleteStandardAction(formData: FormData): Promise<{ error?
     : 0;
   if (marksCount > 0) return { error: "Cannot delete a standard that has recorded marks." };
 
+  const hallTicketCount = await prisma.hallTicket.count({ where: { standardId: id } });
+  if (hallTicketCount > 0) return { error: "Cannot delete a standard that has issued hall tickets." };
+
   await prisma.$transaction([
     prisma.standard.updateMany({ where: { promotesToId: id }, data: { promotesToId: null } }),
     prisma.feeComponent.deleteMany({ where: { feeStructure: { standardId: id } } }),

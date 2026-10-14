@@ -157,6 +157,7 @@ export async function deleteStudentAction(formData: FormData): Promise<never> {
     prisma.bonafideCertificate.deleteMany({ where: { studentId: id } }),
     prisma.stationarySale.deleteMany({ where: { studentId: id } }),
     prisma.marks.deleteMany({ where: { studentId: id } }),
+    prisma.hallTicket.deleteMany({ where: { studentId: id } }),
     prisma.student.delete({ where: { id } }),
   ]);
 

@@ -24,6 +24,7 @@ import {
   BookOpen,
   ClipboardList,
   CalendarClock,
+  Ticket,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/standards", label: "Standards & Fee Structure", icon: Layers, tone: "text-blue-300" },
       { href: "/leaving-certificates", label: "Leaving Certificate", icon: ScrollText, tone: "text-blue-300" },
       { href: "/bonafide-certificates", label: "Bonafide Certificate", icon: FileCheck, tone: "text-blue-300" },
+      { href: "/hall-tickets", label: "Hall Tickets", icon: Ticket, tone: "text-blue-300" },
     ],
   },
   {

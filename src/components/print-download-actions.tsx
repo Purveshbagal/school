@@ -5,6 +5,20 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Download, Image as ImageIcon, Loader2 } from "lucide-react";
 
+// Mobile browsers (iOS Safari in particular) largely ignore the anchor `download`
+// attribute and silently drop `pdf.save()`/programmatic link clicks once they happen
+// after an async gap (canvas capture, dynamic imports) — the click is no longer treated
+// as a direct user gesture. The reliable fallback there is opening the generated file
+// in a new tab as a blob URL, which lets the user view it and use the browser's own
+// "Save to Files" / share sheet.
+export function isMobileBrowser() {
+  if (typeof navigator === "undefined") return false;
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return true;
+  // iPadOS 13+ Safari reports a desktop "Macintosh" UA by default; touch support
+  // is the only reliable signal distinguishing it from an actual Mac.
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
 export function PrintDownloadActions({
   targetId,
   fileName,
@@ -55,20 +69,6 @@ export function PrintDownloadActions({
       useCORS: true,
       backgroundColor: "#ffffff",
     });
-  }
-
-  // Mobile browsers (iOS Safari in particular) largely ignore the anchor `download`
-  // attribute and silently drop `pdf.save()`/programmatic link clicks once they happen
-  // after an async gap (canvas capture, dynamic imports) — the click is no longer treated
-  // as a direct user gesture. The reliable fallback there is opening the generated file
-  // in a new tab as a blob URL, which lets the user view it and use the browser's own
-  // "Save to Files" / share sheet.
-  function isMobileBrowser() {
-    if (typeof navigator === "undefined") return false;
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return true;
-    // iPadOS 13+ Safari reports a desktop "Macintosh" UA by default; touch support
-    // is the only reliable signal distinguishing it from an actual Mac.
-    return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
   }
 
   async function handleDownload() {

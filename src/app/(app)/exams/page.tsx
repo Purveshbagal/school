@@ -11,8 +11,10 @@ import { DeleteButton } from "@/components/delete-button";
 import { formatDate } from "@/lib/utils";
 import { createExamAction, deleteExamAction } from "@/app/actions/exams";
 import { ensureFinalResultExam } from "@/lib/exams";
+import { formatExamDateRange } from "@/lib/hall-tickets";
 import { ExamLinkActions } from "./exam-link-actions";
 import { EditExamDatesDialog } from "./edit-exam-dates-dialog";
+import { ExamDateRangeFields } from "./exam-date-range-fields";
 import { Plus } from "lucide-react";
 
 export default async function ExamsPage() {
@@ -64,7 +66,7 @@ export default async function ExamsPage() {
                             </p>
                           ) : (
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              Exam: {formatDate(exam.examDate)} · Result: {formatDate(exam.resultDate)}
+                              Exam: {formatExamDateRange(exam.examDate, exam.examEndDate)} · Result: {formatDate(exam.resultDate)}
                             </p>
                           )}
                         </div>
@@ -81,12 +83,13 @@ export default async function ExamsPage() {
                               examId={exam.id}
                               examName={exam.name}
                               examDate={exam.examDate}
+                              examEndDate={exam.examEndDate}
                               resultDate={exam.resultDate}
                             />
                             <DeleteButton
                               action={deleteExamAction}
                               hiddenFields={{ id: exam.id }}
-                              confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
+                              confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks and hall tickets for it. This cannot be undone.`}
                             />
                           </div>
                         )}
@@ -122,7 +125,20 @@ export default async function ExamsPage() {
                             {exam.isFinal && <Badge variant="info">Default</Badge>}
                           </span>
                         </TableCell>
-                        <TableCell>{exam.isFinal ? "-" : formatDate(exam.examDate)}</TableCell>
+                        <TableCell>
+                          {exam.isFinal ? (
+                            "-"
+                          ) : (
+                            <>
+                              <span className="whitespace-nowrap">{formatDate(exam.examDate)}</span>
+                              {exam.examEndDate && formatDate(exam.examEndDate) !== formatDate(exam.examDate) && (
+                                <span className="block whitespace-nowrap text-xs text-muted-foreground">
+                                  to {formatDate(exam.examEndDate)}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </TableCell>
                         <TableCell>{exam.isFinal ? "-" : formatDate(exam.resultDate)}</TableCell>
                         <TableCell>
                           <Badge variant={exam.resultLinkActive ? "success" : "outline"}>
@@ -144,12 +160,13 @@ export default async function ExamsPage() {
                                 examId={exam.id}
                                 examName={exam.name}
                                 examDate={exam.examDate}
+                                examEndDate={exam.examEndDate}
                                 resultDate={exam.resultDate}
                               />
                               <DeleteButton
                                 action={deleteExamAction}
                                 hiddenFields={{ id: exam.id }}
-                                confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks entered for it. This cannot be undone.`}
+                                confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks and hall tickets for it. This cannot be undone.`}
                               />
                             </div>
                           )}
@@ -173,10 +190,7 @@ export default async function ExamsPage() {
                 <Label htmlFor="name">Exam / Term Name</Label>
                 <Input id="name" name="name" placeholder="e.g. Unit Test 1, Term 1" required />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="examDate">Exam Date</Label>
-                <Input id="examDate" name="examDate" type="date" required />
-              </div>
+              <ExamDateRangeFields idPrefix="new" />
               <div className="space-y-1.5">
                 <Label htmlFor="resultDate">Result Date</Label>
                 <Input id="resultDate" name="resultDate" type="date" required />

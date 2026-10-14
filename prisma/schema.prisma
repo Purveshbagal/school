@@ -26,6 +26,7 @@ model Standard {
   students      Student[]
   feeStructures FeeStructure[]
   subjects      Subject[]
+  hallTickets   HallTicket[]
   createdAt     DateTime       @default(now())
 }
 
@@ -108,6 +109,7 @@ model Student {
   bonafideCertificates BonafideCertificate[]
   stationarySales StationarySale[]
   marks         Marks[]
+  hallTickets   HallTicket[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -663,7 +665,12 @@ model Subject {
 model Exam {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
   name             String
+  /// First day of the exam. Together with examEndDate this is the "from … to …" range
+  /// shown in Set Exam and printed on hall tickets.
   examDate         DateTime
+  /// Last day of the exam. Nullable because exams created before date ranges existed
+  /// only have a single day — treat a missing end date as a one-day exam.
+  examEndDate      DateTime?
   resultDate       DateTime
   resultToken      String?   @unique
   resultLinkActive Boolean   @default(false)
@@ -677,7 +684,31 @@ model Exam {
   /// downloaded for a specific past year even after they've been promoted.
   academicYear     String?
   marks            Marks[]
+  hallTickets      HallTicket[]
   createdAt        DateTime  @default(now())
+}
+
+/// One generated hall ticket per student per exam. The exam's name and dates are read
+/// live from Exam, so editing them in Set Exam updates tickets already generated.
+/// standardId/academicYear are snapshots from generation time, so a ticket still lists
+/// under the class it was issued for after the student is promoted.
+model HallTicket {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId    String   @db.ObjectId
+  student      Student  @relation(fields: [studentId], references: [id])
+  examId       String   @db.ObjectId
+  exam         Exam     @relation(fields: [examId], references: [id])
+  standardId   String   @db.ObjectId
+  standard     Standard @relation(fields: [standardId], references: [id])
+  academicYear String
+  seatNo       String
+  blockNo      String?
+  centerName   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([studentId, examId])
+  @@index([standardId, examId])
 }
 
 /// One row per student/exam/subject. totalMarks lives here (not on Subject)

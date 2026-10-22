@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getActiveSalaryStructure, getOutstandingAdvanceTotal, getLastPayroll } from "@/lib/payroll-data";
+import { getActiveSalaryStructure, getOutstandingAdvanceTotal } from "@/lib/payroll-data";
 import { resolveDateRange, TEACHER_HISTORY_RANGE_OPTIONS } from "@/lib/date-ranges";
-import { MONTH_NAMES } from "@/lib/payroll-engine";
+import { MONTH_NAMES, ownSalaryAmount, salaryOutstanding } from "@/lib/payroll-engine";
 import { TeacherHistoryFilter } from "./teacher-history-filter";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,25 +29,24 @@ export default async function TeacherDetailPage({
   const teacher = await prisma.teacher.findUnique({ where: { id } });
   if (!teacher) notFound();
 
-  const [structure, outstandingAdvance, lastPayroll, payrolls, advances, salaryPayments] = await Promise.all([
+  const [structure, outstandingAdvance, payrolls, advances, salaryPayments] = await Promise.all([
     getActiveSalaryStructure(id),
     getOutstandingAdvanceTotal(id),
-    getLastPayroll(id),
     prisma.payroll.findMany({ where: { teacherId: id, deletedAt: null } }),
     prisma.advancePayment.findMany({ where: { teacherId: id, deletedAt: null } }),
     prisma.salaryPayment.findMany({ where: { teacherId: id, deletedAt: null } }),
   ]);
-  const pendingFromLastPayroll = lastPayroll ? Math.max(0, lastPayroll.pendingAmount) : 0;
+  const pendingSalary = salaryOutstanding(payrolls);
 
   const payrollLockedMap = new Map(payrolls.map((p) => [p.id, p.locked]));
 
-  // Generated column — salary generated from attendance, no paid/pending status shown.
+  // Generated column — only that month's own salary from payroll (no carried-forward pending), no paid/pending status shown.
   const generateEntries = payrolls
     .map((p) => ({
       kind: "salary" as const,
       id: p.id,
       date: new Date(p.year, p.month - 1, 1),
-      amount: p.netPayable,
+      amount: ownSalaryAmount(p),
       month: p.month,
       year: p.year,
       locked: p.locked,
@@ -123,7 +122,7 @@ export default async function TeacherDetailPage({
             <Card size="sm" className="col-span-2 border-t-2 border-t-warning sm:col-span-1">
               <CardContent>
                 <p className="text-xs text-muted-foreground">Pending Salary</p>
-                <p className="mt-1 text-lg font-semibold text-warning">{formatCurrency(pendingFromLastPayroll)}</p>
+                <p className="mt-1 text-lg font-semibold text-warning">{formatCurrency(pendingSalary)}</p>
               </CardContent>
             </Card>
           </div>

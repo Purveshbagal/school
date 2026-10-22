@@ -32,6 +32,7 @@ function readCommonFields(formData: FormData) {
   const board = String(formData.get("board") || "").trim();
   const photoUrl = String(formData.get("photoUrl") || "").trim();
   const schoolBus = String(formData.get("schoolBus") || "false") === "true";
+  const assignedDriverId = schoolBus ? String(formData.get("assignedDriverId") || "").trim() || null : null;
   const rte = String(formData.get("rte") || "false") === "true";
   const admissionDate = formData.get("admissionDate")
     ? new Date(String(formData.get("admissionDate")))
@@ -67,6 +68,7 @@ function readCommonFields(formData: FormData) {
     board,
     photoUrl: photoUrl || null,
     schoolBus,
+    assignedDriverId,
     rte,
     admissionDate,
     academicYear,
@@ -83,6 +85,12 @@ async function currentVillageBusFee(villageId: string | null): Promise<number> {
   return village?.busFee || 0;
 }
 
+async function validAssignedDriver(id: string | null): Promise<boolean> {
+  if (!id) return true;
+  if (!/^[a-f\d]{24}$/i.test(id)) return false;
+  return Boolean(await prisma.busDriver.findFirst({ where: { id, status: "ACTIVE", busId: { not: null } }, select: { id: true } }));
+}
+
 export async function createStudentAction(
   _prevState: { error?: string; field?: string } | undefined,
   formData: FormData
@@ -95,6 +103,9 @@ export async function createStudentAction(
 
   if (!/^\d{12}$/.test(fields.aadharNumber)) {
     return { error: "Aadhar Card Number is required and must be exactly 12 digits", field: "aadharNumber" };
+  }
+  if (!await validAssignedDriver(fields.assignedDriverId)) {
+    return { error: "Choose an active driver with an assigned bus", field: "assignedDriverId" };
   }
 
   const busFeeSnapshot = await currentVillageBusFee(fields.villageId);
@@ -127,6 +138,9 @@ export async function updateStudentAction(
 
   if (!/^\d{12}$/.test(fields.aadharNumber)) {
     return { error: "Aadhar Card Number is required and must be exactly 12 digits", field: "aadharNumber" };
+  }
+  if (!await validAssignedDriver(fields.assignedDriverId)) {
+    return { error: "Choose an active driver with an assigned bus", field: "assignedDriverId" };
   }
 
   const busFeeSnapshot = await currentVillageBusFee(fields.villageId);

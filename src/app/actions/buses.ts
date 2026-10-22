@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+import { completeTrip } from "@/lib/tracking-server";
+import { notifyTrackingChanged } from "@/lib/tracking-events";
 
 export async function createBusAction(
   _prevState: { error?: string } | undefined,
@@ -63,6 +65,9 @@ export async function updateBusAction(
     throw e;
   }
 
+  // Keep the live map's label in step with a renamed bus.
+  await prisma.busTrip.updateMany({ where: { busId: id, status: "ACTIVE" }, data: { vehicleNumber } });
+
   revalidatePath("/buses");
   revalidatePath(`/buses/${id}`);
   redirect(`/buses/${id}`);
@@ -71,12 +76,25 @@ export async function updateBusAction(
 export async function deleteBusAction(formData: FormData): Promise<never> {
   const id = String(formData.get("id"));
 
+  // A trip running on this bus can't continue without it.
+  const openTrips = await prisma.busTrip.findMany({
+    where: { busId: id, status: "ACTIVE" },
+    select: { id: true },
+  });
+  for (const trip of openTrips) {
+    await completeTrip(trip.id, new Date());
+  }
+  if (openTrips.length) notifyTrackingChanged();
+
   await prisma.$transaction([
     prisma.busExpense.deleteMany({ where: { busId: id } }),
+    // Drivers stay, just without a bus, until they're assigned another one.
+    prisma.busDriver.updateMany({ where: { busId: id }, data: { busId: null } }),
     prisma.bus.delete({ where: { id } }),
   ]);
 
   revalidatePath("/buses");
+  revalidatePath("/live-tracking/drivers");
   redirect("/buses");
 }
 

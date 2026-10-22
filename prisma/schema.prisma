@@ -27,6 +27,7 @@ model Standard {
   feeStructures FeeStructure[]
   subjects      Subject[]
   hallTickets   HallTicket[]
+  examSchedules ExamSchedule[]
   createdAt     DateTime       @default(now())
 }
 
@@ -39,12 +40,12 @@ model District {
 }
 
 model Taluka {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
   name       String
-  districtId String   @db.ObjectId
-  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  districtId String    @db.ObjectId
+  district   District  @relation(fields: [districtId], references: [id], onDelete: Cascade)
   villages   Village[]
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   @@unique([districtId, name])
 }
@@ -63,55 +64,60 @@ model Village {
 }
 
 model Student {
-  id            String       @id @default(auto()) @map("_id") @db.ObjectId
-  admissionNo   String       @unique
-  name          String
-  fatherName    String?
-  motherName    String?
-  gender        String?
-  dob           DateTime?
-  birthPlace    String?
-  aadharNumber  String?
-  penId         String?
-  apaarId       String?
-  phone         String?
-  address       String?
-  village       String?
-  villageId     String?      @db.ObjectId
-  villageRef    Village?     @relation(fields: [villageId], references: [id])
-  taluka        String?
-  district      String?
-  motherTongue  String?
-  religion      String?
-  caste         String?
-  subCaste      String?
-  medium        String?
-  board         String?
-  schoolBus     Boolean      @default(false)
+  id                   String                @id @default(auto()) @map("_id") @db.ObjectId
+  admissionNo          String                @unique
+  name                 String
+  fatherName           String?
+  motherName           String?
+  gender               String?
+  dob                  DateTime?
+  birthPlace           String?
+  aadharNumber         String?
+  penId                String?
+  apaarId              String?
+  phone                String?
+  address              String?
+  village              String?
+  villageId            String?               @db.ObjectId
+  villageRef           Village?              @relation(fields: [villageId], references: [id])
+  taluka               String?
+  district             String?
+  motherTongue         String?
+  religion             String?
+  caste                String?
+  subCaste             String?
+  medium               String?
+  board                String?
+  schoolBus            Boolean               @default(false)
+  pickupLat            Float?
+  pickupLng            Float?
+  pickupAddress        String?
+  pickupUpdatedAt      DateTime?
+  assignedDriverId     String?               @db.ObjectId
   /// Bus fee locked in from the student's village at the last save (create/edit/promotion).
   /// Later changes to the village's bus fee don't retroactively affect already-saved students.
-  busFeeSnapshot Float       @default(0)
+  busFeeSnapshot       Float                 @default(0)
   /// RTE (Right to Education) admission — tuition is waived, so the student only pays the
   /// fee structure's other components (Online & Exam fee etc.) plus bus fee. See src/lib/rte.ts.
-  rte           Boolean      @default(false)
-  standardId    String       @db.ObjectId
-  standard      Standard     @relation(fields: [standardId], references: [id])
-  academicYear  String
-  admissionDate DateTime     @default(now())
-  status        String       @default("ACTIVE")
-  customFee     Float?
-  discount      Float        @default(0)
+  rte                  Boolean               @default(false)
+  standardId           String                @db.ObjectId
+  standard             Standard              @relation(fields: [standardId], references: [id])
+  academicYear         String
+  admissionDate        DateTime              @default(now())
+  status               String                @default("ACTIVE")
+  customFee            Float?
+  discount             Float                 @default(0)
   /// Fee balance carried forward from a prior year at the last "Switch Academic Year" promotion.
-  openingBalance Float       @default(0)
-  photoUrl      String?
-  payments      FeePayment[]
-  leavingCertificates LeavingCertificate[]
+  openingBalance       Float                 @default(0)
+  photoUrl             String?
+  payments             FeePayment[]
+  leavingCertificates  LeavingCertificate[]
   bonafideCertificates BonafideCertificate[]
-  stationarySales StationarySale[]
-  marks         Marks[]
-  hallTickets   HallTicket[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  stationarySales      StationarySale[]
+  marks                Marks[]
+  hallTickets          HallTicket[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   // Public result-lookup page filters by this on every request — without an index,
   // MongoDB does a full collection scan per lookup, which doesn't scale under load.
@@ -226,7 +232,83 @@ model Bus {
   capacity      Int?
   status        String       @default("ACTIVE")
   expenses      BusExpense[]
+  drivers       BusDriver[]
   createdAt     DateTime     @default(now())
+}
+
+// =====================================================================
+// Live tracking — driver app logins, trips and the GPS points they report.
+// =====================================================================
+
+/// Login for the Flutter driver app. Separate from StaffAccess: a driver can only
+/// report location through /api/driver/*, never open the admin web app.
+model BusDriver {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  username     String   @unique
+  passwordHash String
+  phone        String?
+  busId        String?  @db.ObjectId
+  bus          Bus?     @relation(fields: [busId], references: [id])
+  /// Villages this bus route covers. Students whose admission village is in this list
+  /// see this driver's bus live in the student app.
+  villageIds   String[] @default([]) @db.ObjectId
+  status       String   @default("ACTIVE") // ACTIVE | INACTIVE
+  /// Bumped on password change / deactivation so tokens already issued to the app stop working.
+  tokenVersion Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// One "Drive" session in the driver app, from tapping Start to Stop. Driver and bus are
+/// snapshotted (no relations) so history survives deleting or reassigning either.
+model BusTrip {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  driverId       String         @db.ObjectId
+  driverName     String
+  busId          String?        @db.ObjectId
+  vehicleNumber  String
+  status         String         @default("ACTIVE") // ACTIVE | COMPLETED
+  direction      String         @default("TO_SCHOOL") // TO_SCHOOL | TO_HOME
+  startedAt      DateTime       @default(now())
+  endedAt        DateTime?
+  /// Latest reported position, denormalized so the live map can list buses without scanning points.
+  lastLat        Float?
+  lastLng        Float?
+  lastSpeed      Float?
+  lastHeading    Float?
+  lastAccuracy   Float?
+  lastPointAt    DateTime?
+  pointCount     Int            @default(0)
+  /// Filled in when the trip completes (see completeTrip in src/lib/tracking-server.ts).
+  distanceMeters Float?
+  points         BusTripPoint[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status])
+  @@index([updatedAt])
+  @@index([startedAt])
+  @@index([driverId, status])
+  @@index([busId, status])
+}
+
+/// A single GPS fix. `recordedAt` is the phone's fix time; `createdAt` is when the server
+/// stored it — the live feed's cursor, so points uploaded late after a network gap still arrive.
+model BusTripPoint {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  tripId     String   @db.ObjectId
+  trip       BusTrip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  lat        Float
+  lng        Float
+  speed      Float?
+  heading    Float?
+  accuracy   Float?
+  recordedAt DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([tripId, recordedAt])
+  @@index([createdAt])
 }
 
 model BusExpense {
@@ -241,10 +323,10 @@ model BusExpense {
 }
 
 model LeavingCertificate {
-  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
-  certificateNo      String   @unique
-  studentId          String   @db.ObjectId
-  student            Student  @relation(fields: [studentId], references: [id])
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  certificateNo      String    @unique
+  studentId          String    @db.ObjectId
+  student            Student   @relation(fields: [studentId], references: [id])
   registerNumber     String
   aadharNumber       String?
   apaarId            String?
@@ -264,13 +346,13 @@ model LeavingCertificate {
   admissionStandard  String?
   progress           String?
   conduct            String?
-  dateOfLeaving      DateTime @default(now())
+  dateOfLeaving      DateTime  @default(now())
   studyingStandard   String?
   studyingSince      String?
   reasonForLeaving   String?
   remarks            String?
-  issueDate          DateTime @default(now())
-  createdAt          DateTime @default(now())
+  issueDate          DateTime  @default(now())
+  createdAt          DateTime  @default(now())
 }
 
 model BonafideCertificate {
@@ -364,31 +446,31 @@ model SchoolSettings {
 /// Snapshot of a "Switch Academic Year" bulk promotion, kept so the most recent
 /// switch can be undone as long as nothing else has touched the affected students.
 model YearTransition {
-  id           String                 @id @default(auto()) @map("_id") @db.ObjectId
+  id           String                @id @default(auto()) @map("_id") @db.ObjectId
   fromYear     String
   toYear       String
   studentCount Int
-  createdAt    DateTime               @default(now())
+  createdAt    DateTime              @default(now())
   revertedAt   DateTime?
   entries      YearTransitionEntry[]
 }
 
 type YearTransitionEntry {
-  studentId           String @db.ObjectId
-  fromStandardId      String @db.ObjectId
-  toStandardId        String @db.ObjectId
-  fromOpeningBalance  Float
-  toOpeningBalance    Float
-  fromBusFeeSnapshot  Float
-  toBusFeeSnapshot    Float
-  fromBoard           String?
-  toBoard             String?
+  studentId          String  @db.ObjectId
+  fromStandardId     String  @db.ObjectId
+  toStandardId       String  @db.ObjectId
+  fromOpeningBalance Float
+  toOpeningBalance   Float
+  fromBusFeeSnapshot Float
+  toBusFeeSnapshot   Float
+  fromBoard          String?
+  toBoard            String?
   /// customFee is a manual per-student override of the standard's fee structure.
   /// It's tied to the standard it was set for, so it's cleared whenever a
   /// promotion moves the student into a different standard — otherwise the old
   /// override keeps overriding the new standard's live fee structure forever.
-  fromCustomFee       Float?
-  toCustomFee         Float?
+  fromCustomFee      Float?
+  toCustomFee        Float?
 }
 
 // =====================================================================
@@ -436,17 +518,17 @@ model SalaryRevision {
 /// Money given to a teacher ahead of salary. Never counted as salary paid — applied
 /// against a future Payroll's `advanceApplied` explicitly.
 model AdvancePayment {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  teacherId      String    @db.ObjectId
-  teacher        Teacher   @relation(fields: [teacherId], references: [id])
+  id             String               @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId      String               @db.ObjectId
+  teacher        Teacher              @relation(fields: [teacherId], references: [id])
   amount         Float
-  date           DateTime  @default(now())
+  date           DateTime             @default(now())
   note           String?
-  status         String    @default("UNADJUSTED") // UNADJUSTED | PARTIALLY_ADJUSTED | ADJUSTED
-  adjustedAmount Float     @default(0)
+  status         String               @default("UNADJUSTED") // UNADJUSTED | PARTIALLY_ADJUSTED | ADJUSTED
+  adjustedAmount Float                @default(0)
   installments   AdvanceInstallment[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
   createdBy      String?
   updatedBy      String?
   deletedAt      DateTime?
@@ -459,19 +541,19 @@ model AdvancePayment {
 /// consuming the whole advance at once. `amount` is the fixed scheduled EMI; `appliedAmount`
 /// tracks how much of it has actually been deducted so far (may be less than `amount` if capped).
 model AdvanceInstallment {
-  id               String    @id @default(auto()) @map("_id") @db.ObjectId
-  advancePaymentId String    @db.ObjectId
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  advancePaymentId String         @db.ObjectId
   advancePayment   AdvancePayment @relation(fields: [advancePaymentId], references: [id])
-  teacherId        String    @db.ObjectId
-  teacher          Teacher   @relation(fields: [teacherId], references: [id])
+  teacherId        String         @db.ObjectId
+  teacher          Teacher        @relation(fields: [teacherId], references: [id])
   month            Int
   year             Int
   amount           Float
-  appliedAmount    Float     @default(0)
-  status           String    @default("PENDING") // PENDING | DEDUCTED
-  payrollId        String?   @db.ObjectId
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  appliedAmount    Float          @default(0)
+  status           String         @default("PENDING") // PENDING | DEDUCTED
+  payrollId        String?        @db.ObjectId
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   createdBy        String?
   updatedBy        String?
   deletedAt        DateTime?
@@ -508,45 +590,45 @@ model AttendanceSummary {
 /// The generated salary record for one teacher for one month. Unique per
 /// [teacherId, month, year] — enforced transactionally to guarantee no duplicate salary.
 model Payroll {
-  id                   String            @id @default(auto()) @map("_id") @db.ObjectId
-  teacherId            String            @db.ObjectId
-  teacher              Teacher           @relation(fields: [teacherId], references: [id])
-  month                Int
-  year                 Int
-  invoiceNo            String            @unique
-  salaryStructureId    String?           @db.ObjectId
-  workingDays          Float
-  presentDays          Float             @default(0)
-  absentDays           Float             @default(0)
-  halfDays             Float             @default(0)
-  paidLeaveDays        Float             @default(0)
-  unpaidLeaveDays      Float             @default(0)
-  lateCount            Float             @default(0)
-  grossSalary          Float
-  leaveDeduction       Float             @default(0)
-  halfDayDeduction     Float             @default(0)
-  lateDeduction        Float             @default(0)
-  statutoryDeductionsTotal Float         @default(0) // PF + ESIC + professional tax, frozen at generation time
-  otherDeductionsTotal Float             @default(0) // statutoryDeductionsTotal + sum(deductions) — recomputed whenever a deduction line item changes
-  bonusTotal           Float             @default(0) // sum(bonuses) — recomputed whenever a bonus line item changes
-  advanceApplied       Float             @default(0)
-  previousPending      Float             @default(0)
-  netPayable           Float
-  paidAmount           Float             @default(0)
-  pendingAmount        Float
-  status               String            @default("GENERATED") // DRAFT | GENERATED | PARTIALLY_PAID | PAID
-  locked               Boolean           @default(false)
-  lockedAt             DateTime?
-  lockedBy             String?
-  remarks              String?
-  bonuses              Bonus[]
-  deductions           SalaryDeduction[]
-  payments             SalaryPayment[]
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-  createdBy            String?
-  updatedBy            String?
-  deletedAt            DateTime?
+  id                       String            @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId                String            @db.ObjectId
+  teacher                  Teacher           @relation(fields: [teacherId], references: [id])
+  month                    Int
+  year                     Int
+  invoiceNo                String            @unique
+  salaryStructureId        String?           @db.ObjectId
+  workingDays              Float
+  presentDays              Float             @default(0)
+  absentDays               Float             @default(0)
+  halfDays                 Float             @default(0)
+  paidLeaveDays            Float             @default(0)
+  unpaidLeaveDays          Float             @default(0)
+  lateCount                Float             @default(0)
+  grossSalary              Float
+  leaveDeduction           Float             @default(0)
+  halfDayDeduction         Float             @default(0)
+  lateDeduction            Float             @default(0)
+  statutoryDeductionsTotal Float             @default(0) // PF + ESIC + professional tax, frozen at generation time
+  otherDeductionsTotal     Float             @default(0) // statutoryDeductionsTotal + sum(deductions) — recomputed whenever a deduction line item changes
+  bonusTotal               Float             @default(0) // sum(bonuses) — recomputed whenever a bonus line item changes
+  advanceApplied           Float             @default(0)
+  previousPending          Float             @default(0)
+  netPayable               Float
+  paidAmount               Float             @default(0)
+  pendingAmount            Float
+  status                   String            @default("GENERATED") // DRAFT | GENERATED | PARTIALLY_PAID | PAID
+  locked                   Boolean           @default(false)
+  lockedAt                 DateTime?
+  lockedBy                 String?
+  remarks                  String?
+  bonuses                  Bonus[]
+  deductions               SalaryDeduction[]
+  payments                 SalaryPayment[]
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  createdBy                String?
+  updatedBy                String?
+  deletedAt                DateTime?
 
   @@unique([teacherId, month, year])
   @@map("payrolls")
@@ -663,7 +745,7 @@ model Subject {
 /// result-lookup link: resultToken is the /result/[token] slug, and
 /// resultLinkActive lets "Stop" instantly disable it without deleting the token.
 model Exam {
-  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
   name             String
   /// First day of the exam. Together with examEndDate this is the "from … to …" range
   /// shown in Set Exam and printed on hall tickets.
@@ -672,12 +754,12 @@ model Exam {
   /// only have a single day — treat a missing end date as a one-day exam.
   examEndDate      DateTime?
   resultDate       DateTime
-  resultToken      String?   @unique
-  resultLinkActive Boolean   @default(false)
+  resultToken      String?        @unique
+  resultLinkActive Boolean        @default(false)
   /// Marks the single auto-created "Final Result" entry (see ensureFinalResultExam)
   /// whose public link shows a student's combined result across every real exam/term
   /// instead of marks entered against it directly — it never holds marks of its own.
-  isFinal          Boolean   @default(false)
+  isFinal          Boolean        @default(false)
   /// Academic year the exam was created in (e.g. "2026-27"), stamped from
   /// SchoolSettings.academicYear at creation time. Nullable because exams created
   /// before this field existed have no recorded year. Lets a student's result be
@@ -685,7 +767,29 @@ model Exam {
   academicYear     String?
   marks            Marks[]
   hallTickets      HallTicket[]
-  createdAt        DateTime  @default(now())
+  schedules        ExamSchedule[]
+  createdAt        DateTime       @default(now())
+}
+
+/// One paper in a standard's exam timetable (Set Exam → Exam Timetable). The student app
+/// lists a student's upcoming rows by their standard. `subject` is free text so a row can
+/// also be a whole-day exam with no subject.
+model ExamSchedule {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  examId     String   @db.ObjectId
+  exam       Exam     @relation(fields: [examId], references: [id])
+  standardId String   @db.ObjectId
+  standard   Standard @relation(fields: [standardId], references: [id])
+  subject    String?
+  /// The exam day (midnight IST). Times are kept as "HH:mm" text next to it.
+  date       DateTime
+  startTime  String?
+  endTime    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([standardId, date])
+  @@index([examId])
 }
 
 /// One generated hall ticket per student per exam. The exam's name and dates are read
@@ -744,4 +848,17 @@ model Notification {
   createdBy String?
 
   @@map("notifications")
+}
+
+/// Notice Board post shown in the student app. An empty `standardIds` means every student.
+model Notice {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  message     String
+  standardIds String[] @default([]) @db.ObjectId
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
 }

@@ -51,6 +51,7 @@ export async function deleteStandardAction(formData: FormData): Promise<{ error?
     prisma.feeComponent.deleteMany({ where: { feeStructure: { standardId: id } } }),
     prisma.feeStructure.deleteMany({ where: { standardId: id } }),
     prisma.subject.deleteMany({ where: { standardId: id } }),
+    prisma.examSchedule.deleteMany({ where: { standardId: id } }),
     prisma.standard.delete({ where: { id } }),
   ]);
 

@@ -89,7 +89,7 @@ export default async function ExamsPage() {
                             <DeleteButton
                               action={deleteExamAction}
                               hiddenFields={{ id: exam.id }}
-                              confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks and hall tickets for it. This cannot be undone.`}
+                              confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks, hall tickets and timetable entries for it. This cannot be undone.`}
                             />
                           </div>
                         )}
@@ -166,7 +166,7 @@ export default async function ExamsPage() {
                               <DeleteButton
                                 action={deleteExamAction}
                                 hiddenFields={{ id: exam.id }}
-                                confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks and hall tickets for it. This cannot be undone.`}
+                                confirmMessage={`Delete exam "${exam.name}"? This will also delete all marks, hall tickets and timetable entries for it. This cannot be undone.`}
                               />
                             </div>
                           )}

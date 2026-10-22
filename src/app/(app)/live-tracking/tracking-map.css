@@ -1,0 +1,173 @@
+/* Marker styles for the live tracking map (Leaflet divIcons). */
+
+.tm-map {
+  /* Leaflet panes sit above page content otherwise (dialogs, mobile bottom nav). */
+  isolation: isolate;
+  z-index: 0;
+}
+
+.tm-icon {
+  background: transparent;
+  border: 0;
+}
+
+.tm-bus {
+  --tm-color: #16a34a;
+  position: relative;
+  width: 56px;
+  height: 56px;
+  cursor: pointer;
+}
+.tm-bus[data-state="stopped"] {
+  --tm-color: #d97706;
+}
+.tm-bus[data-state="no-signal"] {
+  --tm-color: #6b7280;
+}
+.tm-bus[data-state="waiting"] {
+  --tm-color: #2563eb;
+}
+
+/* State halo under the bus: a pulse while it drives, a quiet ring otherwise. */
+.tm-bus-pulse {
+  position: absolute;
+  inset: 8px;
+  border-radius: 9999px;
+  background: var(--tm-color);
+  opacity: 0.35;
+  animation: tm-pulse 1.8s ease-out infinite;
+}
+.tm-bus:not([data-state="moving"]) .tm-bus-pulse {
+  animation: none;
+  opacity: 0.22;
+  box-shadow: inset 0 0 0 2px var(--tm-color);
+}
+
+.tm-bus-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+.tm-bus[data-selected="true"] .tm-bus-body {
+  transform: scale(1.15);
+}
+
+/* The bus itself (an SVG drawn front-up, rotated to its heading). */
+.tm-bus-arrow {
+  width: 22px;
+  height: 48px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.4));
+  transition: transform 0.7s ease;
+}
+.tm-bus[data-state="no-signal"] .tm-bus-arrow {
+  opacity: 0.6;
+}
+
+.tm-bus-label {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  font: 600 11px/1.6 ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+  pointer-events: none;
+}
+
+@keyframes tm-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.tm-pin {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px 9999px 9999px 0;
+  transform: rotate(-45deg);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.35);
+}
+.tm-pin span {
+  transform: rotate(45deg);
+  color: #fff;
+  font: 700 11px/1 ui-sans-serif, system-ui, sans-serif;
+}
+.tm-pin-start {
+  background: #15803d;
+}
+.tm-pin-end {
+  background: #b91c1c;
+}
+
+.tm-stop {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+.tm-stop-dot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #ea580c;
+  border: 2px solid #fff;
+  color: #fff;
+  font: 700 10px/1 ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+.tm-stop[data-ongoing="true"] .tm-stop-dot {
+  background: #d97706;
+  animation: tm-blink 1.4s ease-in-out infinite;
+}
+.tm-stop-label {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  font: 600 10px/1.6 ui-sans-serif, system-ui, sans-serif;
+  pointer-events: none;
+}
+
+@keyframes tm-blink {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.tm-popup {
+  font: 12px/1.5 ui-sans-serif, system-ui, sans-serif;
+  color: #111827;
+}
+.tm-popup strong {
+  display: block;
+  font-size: 13px;
+}
+.tm-popup a {
+  color: #2563eb;
+}

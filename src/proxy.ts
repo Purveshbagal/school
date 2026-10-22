@@ -29,6 +29,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Driver and student app APIs authenticate with their own bearer tokens, and the live-map
+  // feed checks the session itself so it can answer 401 JSON instead of redirecting to login.
+  if (
+    pathname.startsWith("/api/driver/") ||
+    pathname.startsWith("/api/student/") ||
+    pathname.startsWith("/api/tracking/")
+  ) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) {
     if (pathname === "/") return NextResponse.next();
@@ -64,5 +74,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|image/|api/health).*)"],
+  // downloads/ holds the driver and student app APKs, fetched by people with no admin login.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|image/|downloads/|api/health).*)"],
 };

@@ -34,6 +34,9 @@ export default async function EditStudentPage({
     orderBy: { name: "asc" },
     include: { talukas: { orderBy: { name: "asc" }, include: { villages: { orderBy: { name: "asc" } } } } },
   });
+  const busDrivers = (await prisma.busDriver.findMany({
+    where: { status: "ACTIVE", busId: { not: null } }, include: { bus: true }, orderBy: { name: "asc" },
+  })).flatMap((d) => d.bus ? [{ id: d.id, name: d.name, vehicleNumber: d.bus.vehicleNumber }] : []);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -42,6 +45,7 @@ export default async function EditStudentPage({
         standards={standards}
         feeStructures={feeStructures}
         districts={districts}
+        busDrivers={busDrivers}
         defaultAcademicYear={student.academicYear}
         today={formatDateInput(new Date())}
         student={student}

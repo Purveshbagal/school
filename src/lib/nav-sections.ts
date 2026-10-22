@@ -25,6 +25,9 @@ import {
   ClipboardList,
   CalendarClock,
   Ticket,
+  Navigation,
+  Megaphone,
+  CalendarDays,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +48,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/leaving-certificates", label: "Leaving Certificate", icon: ScrollText, tone: "text-blue-300" },
       { href: "/bonafide-certificates", label: "Bonafide Certificate", icon: FileCheck, tone: "text-blue-300" },
       { href: "/hall-tickets", label: "Hall Tickets", icon: Ticket, tone: "text-blue-300" },
+      { href: "/notices", label: "Notice Board", icon: Megaphone, tone: "text-blue-300" },
     ],
   },
   {
@@ -53,6 +57,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/subjects", label: "Subjects", icon: BookOpen, tone: "text-pink-300" },
       { href: "/exams/marks", label: "Students Marks", icon: ClipboardList, tone: "text-pink-300" },
       { href: "/exams", label: "Set Exam", icon: CalendarClock, tone: "text-pink-300" },
+      { href: "/exams/timetable", label: "Exam Timetable", icon: CalendarDays, tone: "text-pink-300" },
     ],
   },
   {
@@ -82,6 +87,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/buses", label: "School Bus", icon: Bus, tone: "text-orange-300" },
       { href: "/buses/village-fees", label: "Village Bus Fees", icon: MapPin, tone: "text-orange-300" },
+      { href: "/live-tracking", label: "Live Tracking", icon: Navigation, tone: "text-orange-300" },
     ],
   },
   {

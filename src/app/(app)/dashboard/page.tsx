@@ -14,7 +14,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getFeesOverview } from "@/lib/fees";
 import { formatExamDateRange } from "@/lib/hall-tickets";
-import { getPendingSalaryReport } from "@/lib/payroll-reports";
+import { getTeacherWiseReport } from "@/lib/payroll-reports";
 import { getPendingStationaryReport } from "@/lib/stationary";
 import {
   Users,
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
     standards,
     busCount,
     feesOverview,
-    pendingSalary,
+    teacherSalaries,
     pendingStationary,
     recentPayments,
     recentSalaryPayments,
@@ -88,7 +88,7 @@ export default async function DashboardPage() {
     prisma.standard.count(),
     prisma.bus.count(),
     getFeesOverview(),
-    getPendingSalaryReport(),
+    getTeacherWiseReport(),
     getPendingStationaryReport(),
     prisma.feePayment.findMany({
       orderBy: { createdAt: "desc" },
@@ -109,7 +109,9 @@ export default async function DashboardPage() {
     prisma.exam.findMany({ where: { NOT: { isFinal: true } }, orderBy: { examDate: "desc" }, take: 5 }),
   ]);
 
-  const totalSalaryPending = pendingSalary.reduce((sum, p) => sum + p.pendingAmount, 0);
+  // Generated salary minus what's been paid, per teacher — what's actually still owed right now.
+  const teachersWithSalaryDue = teacherSalaries.filter((t) => t.totalPending > 0);
+  const totalSalaryPending = teachersWithSalaryDue.reduce((sum, t) => sum + t.totalPending, 0);
 
   const primaryStats = [
     {
@@ -172,11 +174,11 @@ export default async function DashboardPage() {
     {
       label: "Salary Pending",
       value: formatCurrency(totalSalaryPending),
-      sub: `${pendingSalary.length} payroll${pendingSalary.length === 1 ? "" : "s"} unpaid`,
+      sub: `${teachersWithSalaryDue.length} teacher${teachersWithSalaryDue.length === 1 ? "" : "s"} to be paid`,
       icon: Wallet,
       tone: "text-amber-600 bg-amber-500/10",
       border: "border-t-amber-500",
-      href: "/payroll-reports",
+      href: "/payroll-reports?tab=teacher-wise",
     },
     {
       label: "Stationary Pending",

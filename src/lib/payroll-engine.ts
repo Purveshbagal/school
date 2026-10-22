@@ -158,6 +158,27 @@ export function calcPayroll(input: {
   };
 }
 
+/**
+ * The salary a payroll generated for its own month — netPayable minus the previous month's
+ * pending that was carried into it. Summing netPayable directly double-counts carried-forward
+ * amounts (they also stay pending on the earlier payroll).
+ */
+export function ownSalaryAmount(payroll: { netPayable: number; previousPending: number }): number {
+  return payroll.netPayable - payroll.previousPending;
+}
+
+/**
+ * What is still owed to a teacher right now: everything payroll generated for them minus
+ * everything actually paid against it. Overpayment clamps to 0.
+ */
+export function salaryOutstanding(
+  payrolls: { netPayable: number; previousPending: number; paidAmount: number }[]
+): number {
+  const generated = payrolls.reduce((sum, p) => sum + ownSalaryAmount(p), 0);
+  const paid = payrolls.reduce((sum, p) => sum + p.paidAmount, 0);
+  return Math.max(0, Math.round((generated - paid) * 100) / 100);
+}
+
 export function nextPeriod(month: number, year: number): { month: number; year: number } {
   return month === 12 ? { month: 1, year: year + 1 } : { month: month + 1, year };
 }

@@ -47,6 +47,7 @@ type StudentValues = {
   board?: string | null;
   photoUrl?: string | null;
   schoolBus?: boolean;
+  assignedDriverId?: string | null;
   rte?: boolean;
   standardId?: string;
   academicYear?: string;
@@ -72,6 +73,7 @@ export function StudentForm({
   standards,
   feeStructures,
   districts,
+  busDrivers,
   defaultAcademicYear,
   today,
   student,
@@ -79,6 +81,7 @@ export function StudentForm({
   standards: Standard[];
   feeStructures: FeeStructureLookup[];
   districts: LocationDistrict[];
+  busDrivers: { id: string; name: string; vehicleNumber: string }[];
   defaultAcademicYear: string;
   today: string;
   student?: StudentValues;
@@ -493,6 +496,18 @@ export function StudentForm({
                 </p>
               )}
             </div>
+            {schoolBus === "true" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="assignedDriverId">Student&apos;s bus driver</Label>
+                <NativeSelect id="assignedDriverId" name="assignedDriverId" defaultValue={student?.assignedDriverId || ""}>
+                  <option value="">Use village route</option>
+                  {busDrivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>{driver.vehicleNumber} — {driver.name}</option>
+                  ))}
+                </NativeSelect>
+                <p className="text-xs text-muted-foreground">Choose a driver when multiple buses cover the same village.</p>
+              </div>
+            )}
             {isEdit && (
               <div className="space-y-1.5">
                 <Label htmlFor="status">Status</Label>

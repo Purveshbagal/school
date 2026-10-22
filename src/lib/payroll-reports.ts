@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { ownSalaryAmount, salaryOutstanding } from "@/lib/payroll-engine";
 
 export async function getMonthlySalaryReport(month: number, year: number) {
   return prisma.payroll.findMany({
@@ -15,9 +16,9 @@ export async function getTeacherWiseReport() {
   });
   return teachers.map((t) => ({
     teacher: t,
-    totalGenerated: t.payrolls.reduce((s, p) => s + p.netPayable, 0),
+    totalGenerated: t.payrolls.reduce((s, p) => s + ownSalaryAmount(p), 0),
     totalPaid: t.payrolls.reduce((s, p) => s + p.paidAmount, 0),
-    totalPending: t.payrolls.reduce((s, p) => s + Math.max(0, p.pendingAmount), 0),
+    totalPending: salaryOutstanding(t.payrolls),
     payrollCount: t.payrolls.length,
   }));
 }

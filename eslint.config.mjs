@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Flutter driver app — a separate Dart project.
+    "driver_app/**",
   ]),
 ]);
 

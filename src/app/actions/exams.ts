@@ -66,6 +66,7 @@ export async function deleteExamAction(formData: FormData): Promise<void> {
   await prisma.$transaction([
     prisma.marks.deleteMany({ where: { examId: id } }),
     prisma.hallTicket.deleteMany({ where: { examId: id } }),
+    prisma.examSchedule.deleteMany({ where: { examId: id } }),
     prisma.exam.delete({ where: { id } }),
   ]);
   revalidatePath("/exams");

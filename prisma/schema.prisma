@@ -116,12 +116,28 @@ model Student {
   stationarySales      StationarySale[]
   marks                Marks[]
   hallTickets          HallTicket[]
+  attendance           StudentAttendance[]
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 
   // Public result-lookup page filters by this on every request — without an index,
   // MongoDB does a full collection scan per lookup, which doesn't scale under load.
   @@index([aadharNumber])
+}
+
+model StudentAttendance {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId  String   @db.ObjectId
+  student    Student  @relation(fields: [studentId], references: [id])
+  date       DateTime
+  status     String
+  recordedBy String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([studentId, date])
+  @@index([date, status])
+  @@map("student_attendance")
 }
 
 model FeeStructure {

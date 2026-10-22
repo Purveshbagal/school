@@ -8,6 +8,7 @@ import { dayBounds, dayKey, type TrackingFeed } from "@/lib/tracking";
 import { getExamFeeGateThreshold, checkFeePaymentGate, getStudentFeeSummary } from "@/lib/fees";
 import { sameAcademicYear } from "@/lib/academic-year";
 import { computeStudentExamResult } from "@/lib/results";
+import { studentAttendanceDayBounds } from "@/lib/student-attendance";
 
 // Data behind the Flutter student app's screens (see src/app/api/student/*).
 
@@ -20,6 +21,50 @@ const maskAadhar = (aadhar: string | null) => {
   const digits = (aadhar ?? "").replace(/\D/g, "");
   return digits.length >= 4 ? `XXXX XXXX ${digits.slice(-4)}` : null;
 };
+
+/** Attendance is scoped to the logged-in student and the school's current calendar year. */
+export async function studentAttendance(student: AppStudent) {
+  const today = dayKey(Date.now());
+  const todayBounds = studentAttendanceDayBounds(today)!;
+  const yesterday = dayKey(todayBounds.start.getTime() - 24 * 60 * 60 * 1000);
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  const yearStart = studentAttendanceDayBounds(`${year}-01-01`)!.start;
+  const yearEnd = studentAttendanceDayBounds(`${year + 1}-01-01`)!.start;
+  const monthStart = studentAttendanceDayBounds(`${today.slice(0, 7)}-01`)!.start;
+  const monthEnd = studentAttendanceDayBounds(
+    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`
+  )!.start;
+
+  const rows = await prisma.studentAttendance.findMany({
+    where: { studentId: student.id, date: { gte: yearStart, lt: yearEnd } },
+    orderBy: { date: "desc" },
+    select: { date: true, status: true },
+  });
+  const records = rows.map((row) => ({ date: dayKey(row.date), status: row.status }));
+  const monthRecords = records.filter((row) => row.date >= dayKey(monthStart) && row.date < dayKey(monthEnd));
+  const countStatus = (list: typeof records, status: string) =>
+    list.filter((row) => row.status === status).length;
+  const recordFor = (date: string) => records.find((row) => row.date === date) ?? null;
+
+  return {
+    today: recordFor(today),
+    yesterday: recordFor(yesterday),
+    month: {
+      year,
+      month,
+      present: countStatus(monthRecords, "PRESENT"),
+      absent: countStatus(monthRecords, "ABSENT"),
+      records: monthRecords,
+    },
+    year: {
+      year,
+      present: countStatus(records, "PRESENT"),
+      absent: countStatus(records, "ABSENT"),
+      records,
+    },
+  };
+}
 
 /** Who's logged in, for the profile screen and the app header. */
 export async function studentProfile(student: AppStudent) {

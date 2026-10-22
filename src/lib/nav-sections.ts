@@ -44,6 +44,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/students", label: "All Students", icon: Users, tone: "text-blue-300" },
       { href: "/students/new", label: "New Admission", icon: UserPlus, tone: "text-blue-300" },
+      { href: "/student-attendance", label: "Student Attendance", icon: CalendarCheck, tone: "text-blue-300" },
       { href: "/standards", label: "Standards & Fee Structure", icon: Layers, tone: "text-blue-300" },
       { href: "/leaving-certificates", label: "Leaving Certificate", icon: ScrollText, tone: "text-blue-300" },
       { href: "/bonafide-certificates", label: "Bonafide Certificate", icon: FileCheck, tone: "text-blue-300" },

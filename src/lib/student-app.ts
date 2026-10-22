@@ -6,6 +6,7 @@ import { notifyTrackingChanged } from "@/lib/tracking-events";
 import { placeAt, type BusPlace } from "@/lib/place-lookup";
 import { dayBounds, dayKey, type TrackingFeed } from "@/lib/tracking";
 import { getExamFeeGateThreshold, checkFeePaymentGate, getStudentFeeSummary } from "@/lib/fees";
+import { sameAcademicYear } from "@/lib/academic-year";
 import { computeStudentExamResult } from "@/lib/results";
 
 // Data behind the Flutter student app's screens (see src/app/api/student/*).
@@ -263,7 +264,7 @@ export async function studentFees(student: AppStudent) {
     due: summary.due,
     advance: summary.advance,
     payments: summary.student.payments
-      .filter((p) => p.academicYear === student.academicYear)
+      .filter((p) => sameAcademicYear(p.academicYear, student.academicYear))
       .map((p) => ({
         id: p.id,
         receiptNo: p.receiptNo,

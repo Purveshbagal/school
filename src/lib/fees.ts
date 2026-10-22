@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { feeStructureAmount } from "@/lib/rte";
+import { academicYearKey, sameAcademicYear } from "@/lib/academic-year";
 
 export async function getStudentFeeSummary(studentId: string) {
   const student = await prisma.student.findUnique({
@@ -11,15 +12,12 @@ export async function getStudentFeeSummary(studentId: string) {
   });
   if (!student) return null;
 
-  const feeStructure = await prisma.feeStructure.findUnique({
-    where: {
-      standardId_academicYear: {
-        standardId: student.standardId,
-        academicYear: student.academicYear,
-      },
-    },
+  const feeStructures = await prisma.feeStructure.findMany({
+    where: { standardId: student.standardId },
     include: { components: true },
   });
+  const feeStructure =
+    feeStructures.find((item) => sameAcademicYear(item.academicYear, student.academicYear)) ?? null;
 
   const baseFee = student.customFee ?? feeStructureAmount(feeStructure, student.rte);
   const standardFee = Math.max(0, baseFee - (student.discount || 0));
@@ -30,7 +28,7 @@ export async function getStudentFeeSummary(studentId: string) {
   // in a prior year is already netted into openingBalance at the last "Switch Year", so
   // counting it again here would double-subtract it.
   const totalPaid = student.payments
-    .filter((p) => p.academicYear === student.academicYear)
+    .filter((p) => sameAcademicYear(p.academicYear, student.academicYear))
     .reduce((sum, p) => sum + p.amount, 0);
   const balance = totalFee - totalPaid;
 
@@ -58,20 +56,26 @@ async function computePendingByStudent() {
   ]);
 
   const feeStructureMap = new Map(
-    feeStructures.map((fs) => [`${fs.standardId}_${fs.academicYear}`, fs])
+    feeStructures.map((item) => [
+      `${item.standardId}_${academicYearKey(item.academicYear)}`,
+      item,
+    ])
   );
 
   const pendingByStudent = students.map((student) => {
+    const feeStructure = feeStructureMap.get(
+      `${student.standardId}_${academicYearKey(student.academicYear)}`
+    );
     const baseFee =
       student.customFee ??
-      feeStructureAmount(feeStructureMap.get(`${student.standardId}_${student.academicYear}`), student.rte);
+      feeStructureAmount(feeStructure, student.rte);
     const standardFee = Math.max(0, baseFee - (student.discount || 0));
     const busFee = student.schoolBus ? student.busFeeSnapshot || 0 : 0;
     const openingBalance = student.openingBalance || 0;
     const totalFee = openingBalance + standardFee + busFee;
     // Same year-scoping as getStudentFeeSummary — see comment there.
     const totalPaid = student.payments
-      .filter((p) => p.academicYear === student.academicYear)
+      .filter((p) => sameAcademicYear(p.academicYear, student.academicYear))
       .reduce((sum, p) => sum + p.amount, 0);
     const due = Math.max(0, totalFee - totalPaid);
     // Apportion the paid amount across the three components, oldest debt

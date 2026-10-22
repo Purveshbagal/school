@@ -45,4 +45,3 @@ next-env.d.ts
 # Mobile apps are maintained and distributed separately.
 /driver_app/
 /student_app/
-/public/downloads/*.apk

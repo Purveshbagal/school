@@ -1,0 +1,1 @@
+export const SCHOOL_PHONE_NUMBER = "9011261115";

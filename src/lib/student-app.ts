@@ -9,6 +9,7 @@ import { getExamFeeGateThreshold, checkFeePaymentGate, getStudentFeeSummary } fr
 import { sameAcademicYear } from "@/lib/academic-year";
 import { computeStudentExamResult } from "@/lib/results";
 import { studentAttendanceDayBounds } from "@/lib/student-attendance";
+import { SCHOOL_PHONE_NUMBER } from "@/lib/school-contact";
 
 // Data behind the Flutter student app's screens (see src/app/api/student/*).
 
@@ -100,7 +101,7 @@ export async function studentProfile(student: AppStudent) {
     school: {
       name: settings?.name ?? "School",
       address: settings?.address ?? null,
-      phone: settings?.phone ?? null,
+      phone: SCHOOL_PHONE_NUMBER,
       academicYear: settings?.academicYear ?? null,
     },
   };

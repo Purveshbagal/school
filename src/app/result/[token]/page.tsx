@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { SCHOOL_PHONE_NUMBER } from "@/lib/school-contact";
 import { DocumentHeader } from "@/components/document-header";
 import { AadharLookupForm } from "./aadhar-lookup-form";
 import { FinalResultLookupForm } from "./final-result-lookup-form";
@@ -27,7 +28,7 @@ export default async function ExamResultPage({
               schoolName={schoolName}
               address={settings?.address}
               udise={settings?.udise}
-              phone={settings?.phone}
+              phone={SCHOOL_PHONE_NUMBER}
             />
             <p className="mt-6 rounded-lg bg-destructive/10 px-3.5 py-3 text-sm text-destructive">
               This result link is no longer available.
@@ -39,7 +40,7 @@ export default async function ExamResultPage({
             schoolName={schoolName}
             address={settings?.address || null}
             udise={settings?.udise || null}
-            phone={settings?.phone || null}
+            phone={SCHOOL_PHONE_NUMBER}
           />
         ) : (
           <AadharLookupForm
@@ -47,7 +48,7 @@ export default async function ExamResultPage({
             schoolName={schoolName}
             address={settings?.address || null}
             udise={settings?.udise || null}
-            phone={settings?.phone || null}
+            phone={SCHOOL_PHONE_NUMBER}
             examName={exam?.name || ""}
           />
         )}

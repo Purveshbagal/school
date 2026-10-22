@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { SCHOOL_PHONE_NUMBER } from "@/lib/school-contact";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarksSummaryTable } from "@/components/marks-summary-table";
@@ -97,7 +98,7 @@ export default async function StudentMarksEntryPage({
             years={downloadYears}
             schoolName={settings?.name || "School"}
             address={settings?.address || null}
-            phone={settings?.phone || null}
+            phone={SCHOOL_PHONE_NUMBER}
           />
         </div>
       )}

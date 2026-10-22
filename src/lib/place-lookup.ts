@@ -37,14 +37,21 @@ type NominatimAddress = Record<string, string | undefined>;
 
 function toPlace(data: { address?: NominatimAddress; display_name?: string }): BusPlace | null {
   const a = data.address ?? {};
-  const village = a.village || a.town || a.city || a.municipality || a.suburb || null;
+  const village = a.village || a.town || a.city || a.municipality || null;
   let area = a.neighbourhood || a.quarter || a.hamlet || a.residential || a.suburb || a.road || null;
-  if (area && area === village) area = a.road || null;
-  const region = a.county || a.state_district || null;
+  if (area && area === village) {
+    area = a.road || a.neighbourhood || a.quarter || a.residential || null;
+  }
+  const region = a.city_district || a.district || a.county || a.state_district || null;
   if (!area && !village) {
     const parts = data.display_name?.split(",").map((p) => p.trim()).filter(Boolean) ?? [];
     if (!parts.length) return null;
-    return { area: parts[0] ?? null, village: parts[1] ?? null, region, fullAddress: data.display_name ?? null };
+    return {
+      area: parts[0] ?? null,
+      village: parts[1] ?? null,
+      region: region ?? parts[2] ?? null,
+      fullAddress: data.display_name ?? null,
+    };
   }
   return { area, village, region: region === village ? null : region, fullAddress: data.display_name ?? null };
 }

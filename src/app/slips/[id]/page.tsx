@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { SCHOOL_PHONE_NUMBER } from "@/lib/school-contact";
 import { formatCurrency, formatDate, amountToWords } from "@/lib/utils";
 import { PrintDownloadActions } from "@/components/print-download-actions";
 import { DocumentHeader } from "@/components/document-header";
@@ -57,7 +58,7 @@ export default async function SlipPage({
           schoolName={settings?.name || "School Name"}
           address={settings?.address}
           udise={settings?.udise}
-          phone={settings?.phone}
+          phone={SCHOOL_PHONE_NUMBER}
         />
 
         <div className="my-5 border-t border-dashed border-slate-300" />

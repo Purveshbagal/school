@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { SCHOOL_PHONE_NUMBER } from "@/lib/school-contact";
 import { getStudentFeeSummary } from "@/lib/fees";
 import { formatCurrency, formatDate, amountToWords } from "@/lib/utils";
 import { PrintDownloadActions } from "@/components/print-download-actions";
@@ -61,7 +62,7 @@ export default async function ReceiptPage({
           schoolName={settings?.name || "School Name"}
           address={settings?.address}
           udise={settings?.udise}
-          phone={settings?.phone}
+          phone={SCHOOL_PHONE_NUMBER}
           topLeft={
             <>
               <p className="text-slate-400">Standard</p>

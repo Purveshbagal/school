@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getStudentFeeSummary } from "@/lib/fees";
 import { prisma } from "@/lib/db";
+import { SCHOOL_PHONE_NUMBER } from "@/lib/school-contact";
 import { formatCurrency } from "@/lib/utils";
 import { isTuitionComponent } from "@/lib/rte";
 import { PrintDownloadActions } from "@/components/print-download-actions";
@@ -51,7 +52,7 @@ export default async function FeeStructurePage({
           schoolName={settings?.name || "School Name"}
           address={settings?.address}
           udise={settings?.udise}
-          phone={settings?.phone}
+          phone={SCHOOL_PHONE_NUMBER}
         />
 
         <div className="mt-4 grid grid-cols-2 gap-y-1.5 text-xs">

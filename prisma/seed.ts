@@ -9,13 +9,13 @@ const ACADEMIC_YEAR = "2026-27";
 async function main() {
   await prisma.schoolSettings.upsert({
     where: { id: "main" },
-    update: {},
+    update: { phone: "9011261115" },
     create: {
       id: "main",
       name: "Little Star English School, Devtkali",
       address: "Devtakali, Tal. Shevgaon, Dist. Ahilyanagar",
       udise: "27261102906",
-      phone: "9876543210",
+      phone: "9011261115",
       principalName: "Principal",
       academicYear: ACADEMIC_YEAR,
     },

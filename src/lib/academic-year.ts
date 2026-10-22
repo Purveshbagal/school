@@ -4,7 +4,7 @@
  */
 export function academicYearKey(value: string | null | undefined): string {
   const text = (value ?? "").trim();
-  const match = text.match(/(\d{4})\D+(\d{2}|\d{4})/);
+  const match = text.match(/(\d{4})\D+(\d{4}|\d{2})/);
   if (!match) return text.toLowerCase().replace(/\s+/g, "");
   return `${match[1]}-${match[2].slice(-2)}`;
 }

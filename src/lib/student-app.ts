@@ -256,10 +256,13 @@ export async function studentNotices(student: AppStudent) {
  * fee rule as the public result page: a gated exam stays locked until enough is paid.
  */
 export async function studentResults(student: AppStudent) {
-  const exams = await prisma.exam.findMany({
+  const allExams = await prisma.exam.findMany({
     where: { resultLinkActive: true, isFinal: false },
     orderBy: { examDate: "desc" },
   });
+  // Show a result only from the result date the admin set (inclusive).
+  const today = dayKey(Date.now());
+  const exams = allExams.filter((exam) => dayKey(exam.resultDate) <= today);
 
   const results = [];
   for (const exam of exams) {
